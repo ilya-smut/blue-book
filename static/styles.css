@@ -1,0 +1,151 @@
+/* General Page Styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Header Styling */
+h1 {
+    color: #333;
+    font-size: 32px;
+    margin-top: 10px;
+}
+
+/* Form Container */
+div {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    width: 60%;
+    max-width: 600px;
+}
+
+/* Form Styling */
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* Individual Question Block */
+.question-block {
+    text-align: left;
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #ffffff;
+    border-radius: 6px;
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Question Text */
+.question-block strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+/* Answer Choices */
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Radio Buttons */
+input[type="radio"] {
+    margin-right: 8px;
+}
+
+/* Submit Button */
+button {
+    align-self: center;
+    padding: 10px 15px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    width: 100%;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    div {
+        width: 90%;
+    }
+
+    form {
+        width: 100%;
+    }
+}
+
+/* Question Block Styling */
+.question-block {
+    text-align: left;
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #ffffff;
+    border-radius: 6px;
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Correct Answer Highlight */
+.correct-answer {
+    color: green;
+    font-weight: bold;
+    border-left: 5px solid green;
+    padding-left: 10px;
+}
+
+/* Incorrect Answer Highlight */
+.incorrect-answer {
+    color: red;
+    font-weight: bold;
+    border-left: 5px solid red;
+    padding-left: 10px;
+}
+
+/* User Choice */
+.user-choice {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+/* Explanation Text */
+.explanation {
+    font-size: 14px;
+    color: #555;
+    margin-top: 5px;
+}
+
+/* Brings uniform spacing */
+p {
+    margin: 5px 0;
+}
+
+/* Responsive Layout */
+@media (max-width: 768px) {
+    .question-block {
+        width: 100%;
+    }
+}

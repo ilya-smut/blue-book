@@ -1,0 +1,21 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+    <form id="answerForm" action="{{ url_for('check') }}" method="POST">
+    {% for q_index in range(data['size']) %}
+        <div class="question-block">
+            <p><strong>{{ data["questions"][q_index]['question'] }}</strong></p>
+
+            {% for ch_index in range(4) %}
+                <label>
+                    <input type="radio" name="{{ q_index }}" value="{{ ch_index }}" required>
+                    {{ data["questions"][q_index]['choices'][ch_index]['option'] }}
+                </label>
+            {% endfor %}
+        </div>
+    {% endfor %}
+
+    <button type="submit">Submit Answers</button>
+</form>
+
+{% endblock content %}
