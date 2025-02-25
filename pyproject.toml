@@ -1,18 +1,21 @@
 [project]
-name = "gemini-test"
+name = "bluebook"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Ilya Smut",email = "p2688910@my365.dmu.ac.uk"}
+    {name = "Ilya Smut",email = "ilya.smut.off.g@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "google-genai (>=1.2.0,<2.0.0)",
     "ipykernel (>=6.29.5,<7.0.0)",
-    "python-dotenv (>=1.0.1,<2.0.0)",
-    "flask (>=3.1.0,<4.0.0)"
+    "flask (>=3.1.0,<4.0.0)",
+    "click (>=8.1.8,<9.0.0)"
 ]
+
+[tool.poetry.scripts]
+bluebook = "bluebook.fl:bluebook"
 
 
 [build-system]

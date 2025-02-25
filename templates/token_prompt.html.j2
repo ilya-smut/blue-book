@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter API Token</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Enter Your Gemini API Token</h2>
+        <p>Please enter your API token to continue using the application. Bluebook is using Google Gemini, you can obtain your free access token <a href="https://ai.google.dev/gemini-api/docs/api-key">here</a>. Token will be saved locally on your machine in config.json file either in appdata/bluebook/, or ~/.config/bluebook/ directory depending on your os :)</p>
+        <p>If your token is found invalid during generation of questions, you will be asked to input another valid token.</p>
+
+        <form action="{{ url_for('save_token') }}" method="POST">
+            <label for="API_TOKEN">API Token:</label>
+            <input type="text" id="API_TOKEN" name="API_TOKEN" required>
+            <button type="submit">Save Token</button>
+        </form>
+    </div>
+</body>
+</html>
