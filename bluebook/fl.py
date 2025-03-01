@@ -33,7 +33,7 @@ def save_config(config):
         json.dump(config, f, indent=4)
 
 app = Flask("blue-book", template_folder="templates", static_folder="static")
-state = {}
+state: list[generator.Question] = []
 
 
 @app.route("/generate")
@@ -58,10 +58,11 @@ def root():
     if "API_TOKEN" not in config:
         return render_template("token_prompt.html.j2")  # Show input form
     global state
-    if not state:
-        state['size'] = 0
-    app.logger.debug(state)
-    return render_template("root.html.j2", data=state)
+    serialized_state = generator.serialize_questions(question_list=state)
+    if not serialized_state:
+        serialized_state['size'] = 0
+    app.logger.debug(serialized_state)
+    return render_template("root.html.j2", data=serialized_state)
 
 
 @app.route("/save_token", methods=["POST"])
@@ -79,9 +80,9 @@ def check():
     app.logger.debug(user_answers)
     global state
     original_data = state
-    data_out = {"original_data": original_data, "user_answers": {}, "is_answer_correct":{}}
-    for i in range(original_data['size']):
-        if original_data['questions'][i]['choices'][int(user_answers[str(i)])]['is_correct']:
+    data_out = {"original_data": generator.serialize_questions(original_data), "user_answers": {}, "is_answer_correct":{}}
+    for i in range(len(original_data)):
+        if original_data[i].choices[int(user_answers[str(i)])].is_correct:
             app.logger.debug(f"Question {i} Correct!")
             data_out["user_answers"][i] = int(user_answers[str(i)])
             data_out["is_answer_correct"][i] = True
