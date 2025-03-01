@@ -1,4 +1,4 @@
-<img src="https://github.com/ilya-smut/blue-book/blob/main/static/images/book.svg" alt="blue book" width="170" height="115"/>
+<img src="https://github.com/ilya-smut/blue-book/blob/main/bluebook/static/images/book.svg" alt="blue book" width="170" height="115"/>
 
 # Blue Book
 
