@@ -24,12 +24,17 @@ To install Blue Book, follow these steps:
 
 ## Usage
 
+Please see what you can expect from Blue Book v0.1.0 on this wiki page [wiki page](https://github.com/ilya-smut/blue-book/wiki/What-to-expect-from-Blue-Book-0.1.0%3F):
+
 To start the application, use the following command:
 ```sh
 bluebook start
 ```
 
 The application will run on a local server, allowing you to generate and answer Security+ questions.
+
+<img src="https://github.com/ilya-smut/blue-book/blob/main/examples/screenshots/questions.png" width="450" height="400">
+<img src="https://github.com/ilya-smut/blue-book/blob/main/examples/screenshots/Answer%20check.png" width="450" height="400">
 
 ## Contributing
 If you’d like to contribute to Blue Book, feel free to submit a pull request or open an issue.
