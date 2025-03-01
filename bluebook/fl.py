@@ -140,7 +140,7 @@ def start(debug):
                 'handlers': ['wsgi']
             }
         })
-        app.run("localhost", "5000", False, True)
+        app.run("127.0.0.1", "5000", False, True)
 
 
 if __name__ == "__main__":
