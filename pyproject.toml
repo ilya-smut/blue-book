@@ -5,6 +5,9 @@ description = "Blue Book is an application that uses AI to generate multiple-cho
 authors = ["Ilya Smut <ilya.smut.off.g@gmail.com>"]
 readme = "README.md"
 packages = [{include = "bluebook"}]
+homepage = "https://github.com/ilya-smut/blue-book"
+repository = "https://github.com/ilya-smut/blue-book"
+documentation = "https://github.com/ilya-smut/blue-book/wiki"
 
 [tool.poetry.dependencies]
 python = ">=3.10"
