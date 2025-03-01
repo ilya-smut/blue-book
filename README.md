@@ -1,5 +1,4 @@
-<img src="https://github.com/ilya-smut/blue-book/blob/main/bluebook/static/images/book.svg" width="170" height="115"/>
-
+![Bluebook Logo](https://github.com/ilya-smut/blue-book/blob/main/bluebook/static/images/book.png)
 # Blue Book
 
 Blue Book is an application that generates multiple-choice questions for CompTIA Security+ preparation at the press of a button. It uses the Gemini API to generate questions and provides instant feedback on answers.
