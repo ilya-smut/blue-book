@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "bluebook"
-version = "0.2.0"
+name = "student-bluebook"
+version = "0.2.1"
 description = ""
 authors = ["Ilya Smut <ilya.smut.off.g@gmail.com>"]
 readme = "README.md"

@@ -6,6 +6,13 @@ import os
 import json
 import click
 
+# Compute the directory of the current file
+app_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Set the absolute paths for templates and static folders
+template_dir = os.path.join(app_dir, 'templates')
+static_dir = os.path.join(app_dir, 'static')
+
 
 # Determine the correct config directory based on OS
 def get_config_directory():
@@ -32,7 +39,7 @@ def save_config(config):
     with open(CONFIG_PATH, "w") as f:
         json.dump(config, f, indent=4)
 
-app = Flask("blue-book", template_folder="templates", static_folder="static")
+app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
 state: list[generator.Question] = []
 
 
