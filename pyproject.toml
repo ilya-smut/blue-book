@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "student-bluebook"
-version = "0.2.1"
-description = ""
+version = "0.2.2"
+description = "Blue Book is an application that uses AI to generate multiple-choice questions to prepare for CompTIA Security+ exam"
 authors = ["Ilya Smut <ilya.smut.off.g@gmail.com>"]
 readme = "README.md"
 packages = [{include = "bluebook"}]
@@ -9,7 +9,6 @@ packages = [{include = "bluebook"}]
 [tool.poetry.dependencies]
 python = ">=3.10"
 google-genai = ">=1.2.0,<2.0.0"
-ipykernel = ">=6.29.5,<7.0.0"
 flask = ">=3.1.0,<4.0.0"
 click = ">=8.1.8,<9.0.0"
 pydantic = "^2.10.6"

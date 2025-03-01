@@ -1,10 +1,10 @@
 from flask import Flask, render_template, request
 from logging.config import dictConfig
 import google.genai.errors
-from bluebook import generator
 import os
 import json
 import click
+from bluebook import generator
 
 # Compute the directory of the current file
 app_dir = os.path.dirname(os.path.abspath(__file__))
@@ -39,8 +39,10 @@ def save_config(config):
     with open(CONFIG_PATH, "w") as f:
         json.dump(config, f, indent=4)
 
+
+# Initialize the application and its state
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
-state: list[generator.Question] = []
+state: list[generator.Question] = [] # Essentially a list of gennerated questions
 
 
 @app.route("/generate")
