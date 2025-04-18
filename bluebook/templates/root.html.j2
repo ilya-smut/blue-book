@@ -1,6 +1,13 @@
 {% extends "base.html.j2" %}
 
 {% block content %}
+    {% if session['submitted'] %}
+    {% if  session['additional_request']['set']%}
+        <div><p>CompTIA Security+ questions with focus on <b>{{session['additional_request']['value']}}</b></p></div>
+    {% else %}
+        <div><p>General CompTIA Security+ questions.</p></div>
+    {% endif %}
+    <div>
     <form id="answerForm" action="{{ url_for('check') }}" method="POST">
     {% for q_index in range(data['size']) %}
         <div class="question-block">
@@ -14,8 +21,9 @@
             {% endfor %}
         </div>
     {% endfor %}
-
-    <button type="submit">Submit Answers</button>
+        <button type="submit">Submit Answers</button>
 </form>
+</div>
+{% endif %}
 
 {% endblock content %}

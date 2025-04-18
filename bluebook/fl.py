@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 from logging.config import dictConfig
 import google.genai.errors
 import os
@@ -43,17 +43,38 @@ def save_config(config):
 # Initialize the application and its state
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
 state: list[generator.Question] = [] # Essentially a list of gennerated questions
+app.secret_key = 'placeholder_not_essential'
 
+
+def set_additional_request(value):
+    if not value:
+        session['additional_request'] = {'set': False, 'value': ''}
+    else:
+        session['additional_request'] = {'set': True, 'value': value}
+
+def ensure_session():
+    if 'submitted' not in session:
+        session['submitted'] = False
+    if 'additional_request' not in session:
+        set_additional_request(False)
 
 @app.route("/generate")
 def generate():
     config = load_config()
+    ensure_session()
+    session['submitted'] = True
     if "API_TOKEN" not in config:
         return render_template("token_prompt.html.j2")
     num_of_questions = int(request.args.to_dict()['num_of_questions'])
-    app.logger.debug(f"Generating {num_of_questions} new questions")
+    additional_request = generator.sanitise_input(str(request.args.to_dict()['additional_request']))
+    if not additional_request:
+        app.logger.debug(f"Generating {num_of_questions} new questions")
+        set_additional_request(False)
+    else:
+        app.logger.debug(f"Generating {num_of_questions} new questions with additional request {additional_request}")
+        set_additional_request(additional_request)
     try:
-        gemini_response = generator.ask_gemini(num_of_questions, config['API_TOKEN'])
+        gemini_response = generator.ask_gemini(num_of_questions, config['API_TOKEN'], additional_request=additional_request)
     except google.genai.errors.ClientError:
         return render_template("token_prompt.html.j2")
     global state
@@ -64,6 +85,7 @@ def generate():
 @app.route("/")
 def root():
     config = load_config()
+    ensure_session()
     if "API_TOKEN" not in config:
         return render_template("token_prompt.html.j2")  # Show input form
     global state
@@ -85,6 +107,7 @@ def save_token():
 
 @app.route("/check", methods=["POST"])
 def check():
+    ensure_session()
     user_answers = {key: request.form[key] for key in request.form}
     app.logger.debug(user_answers)
     global state

@@ -21,11 +21,11 @@
             <option value="10">10</option>
             <option value="20">20</option>
         </select>
-         <input type="submit" value="Generate">        
+        <label for="additional_request" style="padding-top: 10px;">Topic to focus on (30 characters max):</label>
+        <input type="text" name="additional_request" id="additional_request">
+        <input type="submit" value="Generate" style="margin-top: 10px;">
     </form>
 </div>
-<div>
 {% block content %}
 {% endblock content %}
-</div>
 </body>
