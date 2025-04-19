@@ -19,7 +19,7 @@ class Question(BaseModel):
 
 def sanitise_input(input: str):
     sanitized = ''
-    if len(input) > 30:
+    if len(input) > 90:
         sanitized = escape(input[:30])
     else:
         sanitized = escape(input)

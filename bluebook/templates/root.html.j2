@@ -1,7 +1,7 @@
 {% extends "base.html.j2" %}
 
 {% block content %}
-    {% if session['submitted'] %}
+{% if session['submitted'] %}
     {% if  session['additional_request']['set']%}
         <div><p>CompTIA Security+ questions with focus on <b>{{session['additional_request']['value']}}</b></p></div>
     {% else %}
