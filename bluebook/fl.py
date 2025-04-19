@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, session
 from logging.config import dictConfig
 import google.genai.errors
 import os
+import random
 import json
 import click
 from bluebook import generator
@@ -43,7 +44,7 @@ def save_config(config):
 # Initialize the application and its state
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
 state: list[generator.Question] = [] # Essentially a list of gennerated questions
-app.secret_key = 'placeholder_not_essential'
+app.secret_key = random.randbytes(32)
 
 
 def set_additional_request(value):
