@@ -5,6 +5,7 @@ Blue Book is an application that generates multiple-choice questions for CompTIA
 
 ## Features
 - Generate CompTIA Security+ multiple-choice questions.
+- Specify the topic you want to the questions to focus on.
 - Submit answers and receive immediate feedback.
 - Explanation of correct and incorrect answers to enhance learning.
 
@@ -17,7 +18,7 @@ You can install bluebook with pip:
 
 ## Usage
 
-Please see bluebook's interface and capabilities on this wiki page [wiki page](https://github.com/ilya-smut/blue-book/wiki/What-to-expect-from-Blue-Book-0.1.0%3F):
+Please see bluebook's interface and capabilities on this wiki page [wiki page](https://github.com/ilya-smut/blue-book/wiki):
 
 To start the application, use the following command:
 ```sh
