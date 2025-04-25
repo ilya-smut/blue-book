@@ -28,23 +28,25 @@ os.makedirs(CONFIG_DIR, exist_ok=True)
 # Set the path for the config file
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
 
+# Initialize the application and its state
+app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
+state: list[generator.Question] = [] # Essentially a list of gennerated questions
+app.secret_key = random.randbytes(32)
+
 # Function to load configuration
 def load_config():
     if os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH, "r") as f:
+            app.logger.debug(f'Config has been read from {CONFIG_PATH}')
             return json.load(f)
+        app.logger.info(f'Config is empty or not present.')
     return {}
 
 # Function to save configuration
 def save_config(config):
     with open(CONFIG_PATH, "w") as f:
         json.dump(config, f, indent=4)
-
-
-# Initialize the application and its state
-app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
-state: list[generator.Question] = [] # Essentially a list of gennerated questions
-app.secret_key = random.randbytes(32)
+    app.logger.info(f'Config has been saved into {CONFIG_PATH}')
 
 
 def set_additional_request(value):
@@ -59,13 +61,19 @@ def ensure_session():
     if 'additional_request' not in session:
         set_additional_request(False)
 
+
+def ensure_token(config):
+    if "API_TOKEN" not in config:
+        app.logger.debug(f'API TOKEN has not been found in {CONFIG_PATH}')
+        return render_template("token_prompt.html.j2")
+    app.logger.debug(f'API TOKEN found in {CONFIG_PATH}')
+
 @app.route("/generate")
 def generate():
     config = load_config()
     ensure_session()
     session['submitted'] = True
-    if "API_TOKEN" not in config:
-        return render_template("token_prompt.html.j2")
+    ensure_token(config)
     num_of_questions = int(request.args.to_dict()['num_of_questions'])
     additional_request = generator.sanitise_input(str(request.args.to_dict()['additional_request']))
     if not additional_request:
@@ -87,8 +95,7 @@ def generate():
 def root():
     config = load_config()
     ensure_session()
-    if "API_TOKEN" not in config:
-        return render_template("token_prompt.html.j2")  # Show input form
+    ensure_token(config)
     global state
     serialized_state = generator.serialize_questions(question_list=state)
     if not serialized_state:
