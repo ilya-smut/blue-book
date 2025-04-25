@@ -1,6 +1,14 @@
 {% extends "base.html.j2" %}
 
 {% block content %}
+    <div class="statistics">
+        {% if data['statistics']['correct'] %}
+            <p class="correct">✔ Correct: {{data['statistics']['correct']}}</p>
+        {% endif %}
+        {% if data['statistics']['incorrect'] %}
+            <p class="incorrect">✖ Incorrect: {{data['statistics']['incorrect']}}</p>
+        {% endif %}
+    </div>
     {% for q_index in range(data['original_data']['size']) %}
         <div class="question-block">
             <p><strong>{{ data['original_data']["questions"][q_index]['question'] }}</strong></p>

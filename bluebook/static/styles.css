@@ -155,3 +155,28 @@ p {
         width: 100%;
     }
 }
+
+/* Statistics Summary Styling */
+.statistics {
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 20px;
+    width: 60%;
+    max-width: 500px;
+    margin: 20px auto;
+    margin-bottom: 0px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.statistics .correct {
+    color: #28a745;
+}
+
+.statistics .incorrect {
+    color: #dc3545;
+}

@@ -7,6 +7,30 @@ import json
 import click
 from bluebook import generator
 
+class Statistics:
+    def __init__(self):
+        self.all_num = 0
+        self.correct = 0
+    
+    def get_correct_num(self):
+        return self.correct
+    
+    def get_incorrect_num(self):
+        return self.all_num - self.correct
+    
+    def increment_correct(self):
+        self.correct += 1
+
+    def increment_all_num(self):
+        self.all_num += 1
+
+    def increment_both(self):
+        self.increment_all_num()
+        self.increment_correct()
+
+    def serialise(self):
+        return {"all": self.all_num, "correct": self.correct, "incorrect": self.get_incorrect_num()}
+
 # Compute the directory of the current file
 app_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -120,16 +144,20 @@ def check():
     app.logger.debug(user_answers)
     global state
     original_data = state
-    data_out = {"original_data": generator.serialize_questions(original_data), "user_answers": {}, "is_answer_correct":{}}
+    statistics = Statistics()
+    data_out = {"original_data": generator.serialize_questions(original_data), "user_answers": {}, "is_answer_correct":{}, "statistics": {}}
     for i in range(len(original_data)):
         if original_data[i].choices[int(user_answers[str(i)])].is_correct:
             app.logger.debug(f"Question {i} Correct!")
             data_out["user_answers"][i] = int(user_answers[str(i)])
             data_out["is_answer_correct"][i] = True
+            statistics.increment_both()
         else:
             app.logger.debug(f"Question {i} Incorrect!")
             data_out["user_answers"][i] = int(user_answers[str(i)])
             data_out["is_answer_correct"][i] = False
+            statistics.increment_all_num()
+    data_out['statistics'] = statistics.serialise()
     app.logger.debug(data_out)
     return render_template("check.html.j2", data=data_out)
 
