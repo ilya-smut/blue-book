@@ -84,6 +84,8 @@ def ensure_session():
         session['submitted'] = False
     if 'additional_request' not in session:
         set_additional_request(False)
+    if 'latest_num' not in session:
+        session['latest_num'] = '2'
 
 
 def ensure_token(config):
@@ -99,6 +101,7 @@ def generate():
     session['submitted'] = True
     ensure_token(config)
     num_of_questions = int(request.args.to_dict()['num_of_questions'])
+    session['latest_num'] = str(num_of_questions)
     additional_request = generator.sanitise_input(str(request.args.to_dict()['additional_request']))
     if not additional_request:
         app.logger.debug(f"Generating {num_of_questions} new questions")
