@@ -99,7 +99,9 @@ def generate():
     config = load_config()
     ensure_session()
     session['submitted'] = True
-    ensure_token(config)
+    token_page = ensure_token(config) 
+    if token_page:
+        return token_page
     num_of_questions = int(request.args.to_dict()['num_of_questions'])
     session['latest_num'] = str(num_of_questions)
     additional_request = generator.sanitise_input(str(request.args.to_dict()['additional_request']))
@@ -122,7 +124,9 @@ def generate():
 def root():
     config = load_config()
     ensure_session()
-    ensure_token(config)
+    token_page = ensure_token(config) 
+    if token_page:
+        return token_page
     global state
     serialized_state = generator.serialize_questions(question_list=state)
     if not serialized_state:
@@ -195,7 +199,7 @@ def start(debug):
                 'handlers': ['wsgi']
             }
         })
-        app.run("localhost", "5000", True, True)
+        app.run("0.0.0.0", "5000", True, True)
     else:
         dictConfig({
             'version': 1,
@@ -212,7 +216,7 @@ def start(debug):
                 'handlers': ['wsgi']
             }
         })
-        app.run("127.0.0.1", "5000", False, True)
+        app.run("0.0.0.0", "5000", False, True)
 
 
 if __name__ == "__main__":

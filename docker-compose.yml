@@ -1,0 +1,6 @@
+services:
+  app:
+    build: .
+    container_name: bluebook
+    ports:
+      - "5000:5000"

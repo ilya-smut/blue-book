@@ -5,7 +5,7 @@ on:
     types: [published]
 
 jobs:
-  publish:
+  publish-pypi:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,3 +26,4 @@ jobs:
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{secrets.PYPI_API_TOKEN}}
         run: poetry publish --build
+        
