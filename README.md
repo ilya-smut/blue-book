@@ -9,12 +9,25 @@ Blue Book is an application that generates multiple-choice questions for CompTIA
 - Specify the topic you want to the questions to focus on.
 - Submit answers and receive immediate feedback.
 - Explanation of correct and incorrect answers to enhance learning.
+- Can be run in a docker container with minimal setup
 
 ## Installation
 
 You can install bluebook with pip:
    ```sh
    pip install student-bluebook
+   ```
+
+With pipx
+   ```sh
+   pipx install student-bluebook
+   ```
+
+Or you can simply run it in a docker container
+   ```sh
+   git clone https://github.com/ilya-smut/blue-book
+   cd blue-book/
+   docker compose up -d
    ```
 
 ## Usage
