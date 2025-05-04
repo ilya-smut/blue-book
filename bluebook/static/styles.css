@@ -57,11 +57,11 @@ div {
 }
 
 .control-panel-row {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    margin-top: 5px;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    margin-top: 0;
     width: 100%;
     max-width: 600px;
     display: flex;
@@ -217,3 +217,29 @@ p {
 .statistics .incorrect {
     color: #dc3545;
 }
+
+.subtle-blue-btn {
+    background-color: #e6f0fa;
+    color: #003366;
+    border: 1px solid #cce0f5;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: none;
+    margin: 0 6px;
+    appearance: none; /* makes sure browsers don’t override style */
+    -webkit-appearance: none;
+  }
+  
+  .subtle-blue-btn:hover {
+    background-color: #d4e6f9;
+    box-shadow: 0 1px 3px rgba(0, 51, 102, 0.1);
+  }
+  
+  .subtle-blue-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.3);
+  }
+  

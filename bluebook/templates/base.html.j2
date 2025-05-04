@@ -15,20 +15,6 @@
 {% if session['TOKEN_PRESENT'] %}
 {% endif %}
 <div class="control-panel">
-    {% if session['TOKEN_PRESENT'] or session['submitted']%}
-        <div class="control-panel-row">
-            {% if session['TOKEN_PRESENT'] %}
-                <form class="control-button-form" action="{{url_for('clear_token')}}" method="POST">
-                    <input type="submit" value="Clear Token">
-                </form>
-            {% endif %}
-            {% if session['submitted'] %}
-                <form class="control-button-form" action="{{url_for('wipe_questions')}}" method="POST">
-                    <input type="submit" value="Wipe Questions">
-                </form>
-            {% endif %}
-        </div>
-    {%endif%}
     <form class="control-panel-form" action="{{url_for('generate')}}">
         <label for="num_of_questions">Number of questions:</label>
         <select name="num_of_questions" id="num_of_questions">
@@ -42,6 +28,18 @@
         <input type="text" name="additional_request" id="additional_request">
         <input type="submit" value="Generate" style="margin-top: 10px;">
     </form>
+        <div class="control-panel-row">
+            {% if session['TOKEN_PRESENT'] %}
+                <form class="control-button-form" action="{{url_for('clear_token')}}" method="POST">
+                    <input type="submit" value="Clear Token" class="subtle-blue-btn">
+                </form>
+            {% endif %}
+            {% if session['submitted'] %}
+                <form class="control-button-form" action="{{url_for('wipe_questions')}}" method="POST">
+                    <input type="submit" value="Wipe Questions" class="subtle-blue-btn">
+                </form>
+            {% endif %}
+        </div>
 </div>
 {% block content %}
 {% endblock content %}
