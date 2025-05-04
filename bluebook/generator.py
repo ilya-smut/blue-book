@@ -50,14 +50,19 @@ You need to create {str(question_num)} multiple choice questions. You are passio
 def ask_gemini(question_num, token, additional_request):
     query = gen_query(question_num, additional_request)
     client = genai.Client(api_key=token)
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-lite-preview-02-05",
-        contents=query,
-        config={
-            'response_mime_type': 'application/json',
-            'response_schema': list[Question],
-        },
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-lite-preview-02-05",
+            contents=query,
+            config={
+                'response_mime_type': 'application/json',
+                'response_schema': list[Question],
+            },
+        )
+    # if server error, return empty list
+    except genai.errors.ServerError as e:
+        logger.error(f"Client error: {e}")
+        return []
 
     logger.debug(f"Response: {response.text}")
     questions: list[Question] = response.parsed
