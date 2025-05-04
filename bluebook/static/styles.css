@@ -24,17 +24,54 @@ div {
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     margin-top: 20px;
-    width: 60%;
+    width: 70%;
     max-width: 600px;
 }
 
 /* Form Styling */
-form {
+.control-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 0;
+    gap: 10px;
+    background: none;
+    padding: 0;
+    border-radius: none;
+    box-shadow: none;
+    margin-top: none;
+}
+
+.control-panel-form {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     width: 100%;
     margin-top: 10px;
+}
+
+.control-panel-row {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 5px;
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+.control-button-form{
+    width: auto;
 }
 
 /* Individual Question Block */
@@ -75,7 +112,7 @@ input[type="radio"] {
 }
 
 /* Submit Button */
-button {
+.submit-answers-button {
     align-self: center;
     padding: 10px 15px;
     border: none;
@@ -88,7 +125,7 @@ button {
     width: 100%;
 }
 
-button:hover {
+.submit-answers-button:hover {
     background-color: #0056b3;
 }
 

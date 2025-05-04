@@ -2,10 +2,14 @@
 
 {% block content %}
 {% if session['submitted'] %}
-    {% if  session['additional_request']['set']%}
-        <div><p>CompTIA Security+ questions with focus on <b>{{session['additional_request']['value']}}</b></p></div>
+    {%if data['size']%}
+        {% if  session['additional_request']['set']%}
+            <div><p>CompTIA Security+ questions with focus on <b>{{session['additional_request']['value']}}</b></p></div>
+        {% else %}
+            <div><p>General CompTIA Security+ questions.</p></div>
+        {% endif %}
     {% else %}
-        <div><p>General CompTIA Security+ questions.</p></div>
+        <div><p>No questions were generated. This may be due to high server load. Please try again in a few moments.</p></div>
     {% endif %}
     <div>
     <form id="answerForm" action="{{ url_for('check') }}" method="POST">
@@ -21,7 +25,9 @@
             {% endfor %}
         </div>
     {% endfor %}
-        <button type="submit">Submit Answers</button>
+        {%if data['size']%}
+            <button class="submit-answers-button" type="submit">Submit Answers</button>
+        {%endif%}
 </form>
 </div>
 {% endif %}

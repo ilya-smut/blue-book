@@ -6,6 +6,7 @@ import random
 import json
 import click
 from bluebook import generator
+from bluebook import token_manager
 
 class Statistics:
     def __init__(self):
@@ -31,6 +32,7 @@ class Statistics:
     def serialise(self):
         return {"all": self.all_num, "correct": self.correct, "incorrect": self.get_incorrect_num()}
 
+
 # Compute the directory of the current file
 app_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,38 +41,10 @@ template_dir = os.path.join(app_dir, 'templates')
 static_dir = os.path.join(app_dir, 'static')
 
 
-# Determine the correct config directory based on OS
-def get_config_directory():
-    if os.name == "nt":  # Windows
-        return os.path.join(os.getenv("APPDATA"), "bluebook")
-    else:  # macOS/Linux
-        return os.path.join(os.path.expanduser("~"), ".config", "bluebook")
-
-# Ensure the directory exists
-CONFIG_DIR = get_config_directory()
-os.makedirs(CONFIG_DIR, exist_ok=True)
-# Set the path for the config file
-CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
-
 # Initialize the application and its state
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
 state: list[generator.Question] = [] # Essentially a list of gennerated questions
 app.secret_key = random.randbytes(32)
-
-# Function to load configuration
-def load_config():
-    if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, "r") as f:
-            app.logger.debug(f'Config has been read from {CONFIG_PATH}')
-            return json.load(f)
-        app.logger.info(f'Config is empty or not present.')
-    return {}
-
-# Function to save configuration
-def save_config(config):
-    with open(CONFIG_PATH, "w") as f:
-        json.dump(config, f, indent=4)
-    app.logger.info(f'Config has been saved into {CONFIG_PATH}')
 
 
 def set_additional_request(value):
@@ -79,6 +53,7 @@ def set_additional_request(value):
     else:
         session['additional_request'] = {'set': True, 'value': value}
 
+
 def ensure_session():
     if 'submitted' not in session:
         session['submitted'] = False
@@ -86,22 +61,20 @@ def ensure_session():
         set_additional_request(False)
     if 'latest_num' not in session:
         session['latest_num'] = '2'
+    if 'TOKEN_PRESENT' not in session:
+        session['TOKEN_PRESENT'] = False
 
-
-def ensure_token(config):
-    if "API_TOKEN" not in config:
-        app.logger.debug(f'API TOKEN has not been found in {CONFIG_PATH}')
-        return render_template("token_prompt.html.j2")
-    app.logger.debug(f'API TOKEN found in {CONFIG_PATH}')
 
 @app.route("/generate")
 def generate():
-    config = load_config()
+    '''
+    TODO: ServerError: google.genai.errors.ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The model is overloaded. Please try again later.', 'status': 'UNAVAILABLE'}}
+    '''
+    config = token_manager.load_config()
     ensure_session()
-    session['submitted'] = True
-    token_page = ensure_token(config) 
-    if token_page:
+    if token_page:= token_manager.ensure_token(config):
         return token_page
+    session['submitted'] = True
     num_of_questions = int(request.args.to_dict()['num_of_questions'])
     session['latest_num'] = str(num_of_questions)
     additional_request = generator.sanitise_input(str(request.args.to_dict()['additional_request']))
@@ -122,25 +95,45 @@ def generate():
 
 @app.route("/")
 def root():
-    config = load_config()
+    config = token_manager.load_config()
     ensure_session()
-    token_page = ensure_token(config) 
-    if token_page:
-        return token_page
     global state
     serialized_state = generator.serialize_questions(question_list=state)
     if not serialized_state:
         serialized_state['size'] = 0
+    if token_manager.is_token_present(config):
+        session['TOKEN_PRESENT'] = True
+    else:
+        session['TOKEN_PRESENT'] = False
     app.logger.debug(serialized_state)
+    
     return render_template("root.html.j2", data=serialized_state)
 
 
 @app.route("/save_token", methods=["POST"])
 def save_token():
     api_token = request.form.get("API_TOKEN")
-    config = load_config()
+    config = token_manager.load_config()
     config["API_TOKEN"] = api_token
-    save_config(config)
+    token_manager.save_config(config)
+    return root()
+
+
+@app.route("/clear_token", methods=["POST"])
+def clear_token():
+    token_manager.clear_token()
+    return root()
+
+
+@app.route("/wipe_questions", methods=["POST"])
+def wipe_questions():
+    session['submitted'] = False
+    set_additional_request(False)
+    session['latest_num'] = '2'
+    global state
+    state = []
+    if 'TOKEN_PRESENT' not in session:
+        session['TOKEN_PRESENT'] = False
     return root()
 
 
