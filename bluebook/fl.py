@@ -3,7 +3,6 @@ from logging.config import dictConfig
 import google.genai.errors
 import os
 import random
-import json
 import click
 from bluebook import generator
 from bluebook import token_manager
@@ -67,9 +66,6 @@ def ensure_session():
 
 @app.route("/generate")
 def generate():
-    '''
-    TODO: ServerError: google.genai.errors.ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The model is overloaded. Please try again later.', 'status': 'UNAVAILABLE'}}
-    '''
     config = token_manager.load_config()
     ensure_session()
     if token_page:= token_manager.ensure_token(config):
