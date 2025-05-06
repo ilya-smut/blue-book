@@ -7,6 +7,9 @@ class ExtraRequest(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     request: str 
 
+    def to_dict(self):
+        return {'id': self.id, 'request': self.request}
+
 
 class Database:
     def __init__(self):
@@ -25,7 +28,11 @@ class Database:
             except:
                 pass
         with Session(self.engine) as session:
-            return session.exec(select(ExtraRequest).where(id=id)).first()
+            return session.exec(select(ExtraRequest).where(ExtraRequest.id==id)).first()
+
+    def select_extra_req_by_value(self, request: str):
+        with Session(self.engine) as session:
+            return session.exec(select(ExtraRequest).where(ExtraRequest.request == request)).first()
     
     def add_extra_request(self, request: int):
         extra_request = ExtraRequest(request=request)
@@ -40,7 +47,11 @@ class Database:
             except:
                 pass
         with Session(self.engine) as session:
-            session.exec(delete(ExtraRequest).where(id=id))
+            session.exec(delete(ExtraRequest).where(ExtraRequest.id==id))
+            session.commit()
     
-
+    def remove_extra_request_by_value(self, request):
+        with Session(self.engine) as session:
+            session.exec(delete(ExtraRequest).where(ExtraRequest.request==request))
+            session.commit()
         
