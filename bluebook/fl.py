@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session
+from flask import Flask, render_template, request, session, redirect
 from logging.config import dictConfig
 import google.genai.errors
 import os
@@ -156,6 +156,16 @@ def check():
     data_out['statistics'] = statistics.serialise()
     app.logger.debug(data_out)
     return render_template("check.html.j2", data=data_out)
+
+
+@app.route('/save-the-topic', methods=['POST'])
+def save_the_topic():
+    return redirect("/")
+
+
+@app.route('/remove-saved-topic', methods=['POST'])
+def remove_saved_topic():
+    return redirect("/")
 
 
 @click.group()
