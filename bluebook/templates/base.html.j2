@@ -26,6 +26,7 @@
         </select>
         <label for="additional_request" style="padding-top: 10px;">Topic to focus on (90 characters max):</label>
         <input type="text" name="additional_request" id="additional_request">
+        <!--<select name="additional_request_preset" id="additional_request_preset"></select>!-->
         <input type="submit" value="Generate" style="margin-top: 10px;">
     </form>
         <div class="control-panel-row">
@@ -37,6 +38,12 @@
             {% if session['submitted'] %}
                 <form class="control-button-form" action="{{url_for('wipe_questions')}}" method="POST">
                     <input type="submit" value="Wipe Questions" class="subtle-blue-btn">
+                </form>
+            {% endif %}
+            {% if session['additional_request']['set']%}
+                <form class="control-button-form" action="{{url_for('save_the_topic')}}" method="POST">
+                    <input type="hidden" id="topic" name="topic" value="{{session['additional_request']['value']}}">
+                    <input type="submit" value="Save Topic" class="subtle-blue-btn">
                 </form>
             {% endif %}
         </div>

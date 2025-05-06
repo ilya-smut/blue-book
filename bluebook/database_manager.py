@@ -1,10 +1,11 @@
-from sqlmodel import Field, SQLModel, Session, create_engine, select, delete
+from sqlmodel import Field, SQLModel, Session, UniqueConstraint, create_engine, select, delete
 
 
 # Data Models
 class ExtraRequest(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("request"),)
     id: int | None = Field(default=None, primary_key=True)
-    request: str
+    request: str 
 
 
 class Database:
