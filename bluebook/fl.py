@@ -185,6 +185,7 @@ def save_the_topic():
         topic_to_save = request.form["topic"]
         try:
             db_manager.add_extra_request(topic_to_save)
+            set_additional_request(topic_to_save) # To update session
         except sqlalchemy.exc.IntegrityError:
             app.logger.info("Topic was NOT saved: Already present.")
             pass
@@ -200,6 +201,7 @@ def remove_saved_topic():
             app.logger.debug(f'Attempting to delete saved topic: {topic_to_delete}')
             db_manager.remove_extra_request_by_value(topic_to_delete)
             app.logger.info(f'Topic was removed: {topic_to_delete}')
+            set_additional_request(topic_to_delete) # To update session
     return redirect("/")
 
 

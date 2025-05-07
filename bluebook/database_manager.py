@@ -14,7 +14,7 @@ class ExtraRequest(SQLModel, table=True):
 class Database:
     def __init__(self):
         # Setup the database
-        self.engine = create_engine("sqlite:///database.db")
+        self.engine = create_engine("sqlite:///database.db") # TODO: Specify path as in config file. Otherwise - current working directory will be used.
         SQLModel.metadata.create_all(self.engine)
 
     def select_all_extra_requests(self):

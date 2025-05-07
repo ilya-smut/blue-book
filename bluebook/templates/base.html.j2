@@ -27,7 +27,7 @@
         <label for="additional_request" style="padding-top: 10px;">Topic to focus on (90 characters max):</label>
         {% if saved_topics['size'] %}
             <select name="additional_request_preset" id="additional_request_preset">
-                <option value="">Custom</option>
+                <option value="">using textbox below</option>
                 {% for topic in saved_topics['requests'] %}
                     <option value="{{topic['request']}}">{{topic['request']}}</option>
                 {% endfor %}
