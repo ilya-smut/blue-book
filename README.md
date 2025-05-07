@@ -26,6 +26,10 @@ With pipx
 
 Or you can simply run it in a docker container
    ```sh
+   docker run -d -p 5000:5000 --platform linux/amd64 ilyasmut/student-bluebook
+   ```
+   or
+   ```sh
    git clone https://github.com/ilya-smut/blue-book
    cd blue-book/
    docker compose up -d
