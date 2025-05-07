@@ -94,7 +94,7 @@ def generate():
     additional_request = generator.sanitise_input(str(request.form['additional_request']))
     if "additional_request_preset" in request.form:
         if request.form['additional_request_preset']:
-            additional_request = request.form['additional_request_preset']
+            additional_request = generator.sanitise_input(str(request.form['additional_request_preset']))
     if not additional_request:
         app.logger.debug(f"Generating {num_of_questions} new questions")
         set_additional_request(False)
@@ -182,7 +182,7 @@ def check():
 def save_the_topic():
     ensure_session()
     if "topic" in request.form:
-        topic_to_save = request.form["topic"]
+        topic_to_save = session['additional_request']['value']
         try:
             db_manager.add_extra_request(topic_to_save)
             set_additional_request(topic_to_save) # To update session
@@ -196,7 +196,7 @@ def save_the_topic():
 def remove_saved_topic():
     ensure_session()
     if "topic" in request.form:
-        topic_to_delete = request.form["topic"]
+        topic_to_delete = session['additional_request']['value']
         if db_manager.select_extra_req_by_value(topic_to_delete):
             app.logger.debug(f'Attempting to delete saved topic: {topic_to_delete}')
             db_manager.remove_extra_request_by_value(topic_to_delete)

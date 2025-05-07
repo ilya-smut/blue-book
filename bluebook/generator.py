@@ -1,8 +1,8 @@
 from google import genai
-import json
 from pydantic import BaseModel
 import logging
-from markupsafe import escape
+import bleach
+import re
 
 logger = logging.getLogger("[Generator]")
 
@@ -11,18 +11,29 @@ class Choice(BaseModel):
     is_correct: bool
     explanation: str
 
+    def escape(self):
+        self.option = bleach.clean(self.option)
+        self.explanation = bleach.clean(self.explanation)
+
 
 class Question(BaseModel):
     question: str
     choices: list[Choice]
 
+    def escape(self):
+        self.question = bleach.clean(self.question)
+        for choice in self.choices:
+            choice.escape()
+
 
 def sanitise_input(input: str):
     sanitized = ''
     if len(input) > 90:
-        sanitized = escape(input[:30])
+        sanitized = re.sub('[^0-9a-zA-Z ]+', '', input[:90])
+        sanitized = bleach.clean(sanitized)
     else:
-        sanitized = escape(input)
+        sanitized = re.sub('[^0-9a-zA-Z ]+', '', input)
+        sanitized = bleach.clean(sanitized)
     return sanitized
 
 
@@ -66,8 +77,8 @@ def ask_gemini(question_num, token, additional_request):
 
     logger.debug(f"Response: {response.text}")
     questions: list[Question] = response.parsed
-    #response_loaded = json.loads(response.text[8:-3])
-    #response_loaded['size'] = question_num
+    for question in questions:
+        question.escape()
     return questions
 
 
