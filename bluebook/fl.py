@@ -1,11 +1,13 @@
-from flask import Flask, render_template, request, session
+from flask import Flask, render_template, request, session, redirect
 from logging.config import dictConfig
 import google.genai.errors
 import os
 import random
 import click
+import sqlalchemy.exc
 from bluebook import generator
 from bluebook import token_manager
+from bluebook import database_manager
 
 class Statistics:
     def __init__(self):
@@ -44,13 +46,18 @@ static_dir = os.path.join(app_dir, 'static')
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
 state: list[generator.Question] = [] # Essentially a list of gennerated questions
 app.secret_key = random.randbytes(32)
+db_manager = database_manager.Database()
 
 
 def set_additional_request(value):
     if not value:
-        session['additional_request'] = {'set': False, 'value': ''}
+        session['additional_request'] = {'set': False, 'value': '', 'saved': False}
     else:
-        session['additional_request'] = {'set': True, 'value': value}
+        saved_request = db_manager.select_extra_req_by_value(value)
+        if saved_request:
+            session['additional_request'] = {'set': True, 'value': value, 'saved': True}
+        else:
+            session['additional_request'] = {'set': True, 'value': value, 'saved': False}
 
 
 def ensure_session():
@@ -64,16 +71,30 @@ def ensure_session():
         session['TOKEN_PRESENT'] = False
 
 
-@app.route("/generate")
+def obtain_saved_topics():
+    data = {}
+    all_saved_topics = db_manager.select_all_extra_requests()
+    size = len(all_saved_topics)
+    data['size'] = size
+    data['requests'] = []
+    for topic in all_saved_topics:
+        data['requests'].append(topic.to_dict())
+    return data
+
+
+@app.route("/generate", methods=['POST'])
 def generate():
     config = token_manager.load_config()
     ensure_session()
     if token_page:= token_manager.ensure_token(config):
         return token_page
     session['submitted'] = True
-    num_of_questions = int(request.args.to_dict()['num_of_questions'])
+    num_of_questions = int(request.form['num_of_questions'])
     session['latest_num'] = str(num_of_questions)
-    additional_request = generator.sanitise_input(str(request.args.to_dict()['additional_request']))
+    additional_request = generator.sanitise_input(str(request.form['additional_request']))
+    if "additional_request_preset" in request.form:
+        if request.form['additional_request_preset']:
+            additional_request = generator.sanitise_input(str(request.form['additional_request_preset']))
     if not additional_request:
         app.logger.debug(f"Generating {num_of_questions} new questions")
         set_additional_request(False)
@@ -101,9 +122,8 @@ def root():
         session['TOKEN_PRESENT'] = True
     else:
         session['TOKEN_PRESENT'] = False
-    app.logger.debug(serialized_state)
-    
-    return render_template("root.html.j2", data=serialized_state)
+    #app.logger.debug(serialized_state)
+    return render_template("root.html.j2", data=serialized_state, saved_topics=obtain_saved_topics())
 
 
 @app.route("/save_token", methods=["POST"])
@@ -155,7 +175,34 @@ def check():
             statistics.increment_all_num()
     data_out['statistics'] = statistics.serialise()
     app.logger.debug(data_out)
-    return render_template("check.html.j2", data=data_out)
+    return render_template("check.html.j2", data=data_out, saved_topics=obtain_saved_topics())
+
+
+@app.route('/save-the-topic', methods=['POST'])
+def save_the_topic():
+    ensure_session()
+    if "topic" in request.form:
+        topic_to_save = session['additional_request']['value']
+        try:
+            db_manager.add_extra_request(topic_to_save)
+            set_additional_request(topic_to_save) # To update session
+        except sqlalchemy.exc.IntegrityError:
+            app.logger.info("Topic was NOT saved: Already present.")
+            pass
+    return redirect("/")
+
+
+@app.route('/remove-saved-topic', methods=['POST'])
+def remove_saved_topic():
+    ensure_session()
+    if "topic" in request.form:
+        topic_to_delete = session['additional_request']['value']
+        if db_manager.select_extra_req_by_value(topic_to_delete):
+            app.logger.debug(f'Attempting to delete saved topic: {topic_to_delete}')
+            db_manager.remove_extra_request_by_value(topic_to_delete)
+            app.logger.info(f'Topic was removed: {topic_to_delete}')
+            set_additional_request(topic_to_delete) # To update session
+    return redirect("/")
 
 
 @click.group()

@@ -15,7 +15,7 @@
 {% if session['TOKEN_PRESENT'] %}
 {% endif %}
 <div class="control-panel">
-    <form class="control-panel-form" action="{{url_for('generate')}}">
+    <form class="control-panel-form" action="{{url_for('generate')}}" method="POST">
         <label for="num_of_questions">Number of questions:</label>
         <select name="num_of_questions" id="num_of_questions">
             <option value="{{session['latest_num']}}">{{session['latest_num']}}</option>
@@ -25,8 +25,16 @@
             {% if session['latest_num'] != "20"%}<option value="20">20</option>{%endif%}
         </select>
         <label for="additional_request" style="padding-top: 10px;">Topic to focus on (90 characters max):</label>
+        {% if saved_topics['size'] %}
+            <select name="additional_request_preset" id="additional_request_preset">
+                <option value="">using textbox below</option>
+                {% for topic in saved_topics['requests'] %}
+                    <option value="{{topic['request']}}">{{topic['request']}}</option>
+                {% endfor %}
+            </select>
+        {% endif %}
         <input type="text" name="additional_request" id="additional_request">
-        <input type="submit" value="Generate" style="margin-top: 10px;">
+        <input type="submit" value="Generate" style="margin-top: 10px;" class="subtle-blue-btn">
     </form>
         <div class="control-panel-row">
             {% if session['TOKEN_PRESENT'] %}
@@ -37,6 +45,17 @@
             {% if session['submitted'] %}
                 <form class="control-button-form" action="{{url_for('wipe_questions')}}" method="POST">
                     <input type="submit" value="Wipe Questions" class="subtle-blue-btn">
+                </form>
+            {% endif %}
+            {% if session['additional_request']['set'] and not session['additional_request']['saved']%}
+                <form class="control-button-form" action="{{url_for('save_the_topic')}}" method="POST">
+                    <input type="hidden" id="topic" name="topic" value="{{session['additional_request']['value']}}">
+                    <input type="submit" value="Save Topic" class="subtle-blue-btn">
+                </form>
+            {% elif session['additional_request']['set'] and session['additional_request']['saved']%}
+                <form class="control-button-form" action="{{url_for('remove_saved_topic')}}" method="POST">
+                    <input type="hidden" id="topic" name="topic" value="{{session['additional_request']['value']}}">
+                    <input type="submit" value="Remove saved topic" class="subtle-blue-btn">
                 </form>
             {% endif %}
         </div>

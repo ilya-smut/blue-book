@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "student-bluebook"
-version = "0.4.0"
+version = "0.5.0"
 description = "Blue Book is an application that uses AI to generate multiple-choice questions to prepare for CompTIA Security+ exam"
 authors = ["Ilya Smut <ilya.smut.off.g@gmail.com>"]
 readme = "README.md"
@@ -15,6 +15,8 @@ google-genai = ">=1.2.0,<2.0.0"
 flask = ">=3.1.0,<4.0.0"
 click = ">=8.1.8,<9.0.0"
 pydantic = "^2.10.6"
+sqlmodel = "^0.0.24"
+bleach = "^6.2.0"
 
 [tool.poetry.scripts]
 bluebook = "bluebook.fl:bluebook"
