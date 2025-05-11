@@ -4,6 +4,8 @@
 
 Blue Book is an application that generates multiple-choice questions for CompTIA Security+ preparation at the press of a button. It uses the Gemini API to generate questions and provides instant feedback on answers.
 
+[Project's Homepage](https://student-bluebook.notion.site/)
+
 ## Features
 - Generate CompTIA Security+ multiple-choice questions.
 - Specify the topic you want to the questions to focus on.
