@@ -167,6 +167,14 @@ input[type="radio"] {
     padding-left: 10px;
 }
 
+/* Incorrect Answer Highlight */
+.study-recommendation {
+    color: rgb(196, 145, 51);
+    font-weight: bold;
+    border-left: 5px solid rgb(196, 145, 51);
+    padding-left: 10px;
+}
+
 /* User Choice */
 .user-choice {
     font-weight: bold;

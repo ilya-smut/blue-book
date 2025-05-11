@@ -113,7 +113,7 @@ def root():
     config = token_manager.load_config()
     ensure_session()
     global state
-    serialized_state = generator.serialize_questions(question_list=state)
+    serialized_state = data_models.serialize_questions(question_list=state)
     if not serialized_state:
         serialized_state['size'] = 0
     if token_manager.is_token_present(config):
@@ -159,7 +159,7 @@ def check():
     global state
     original_data = state
     statistics = Statistics()
-    data_out = {"original_data": generator.serialize_questions(original_data), "user_answers": {}, "is_answer_correct":{}, "statistics": {}}
+    data_out = {"original_data": data_models.serialize_questions(original_data), "user_answers": {}, "is_answer_correct":{}, "statistics": {}}
     for i in range(len(original_data)):
         if original_data[i].choices[int(user_answers[str(i)])].is_correct:
             app.logger.debug(f"Question {i} Correct!")

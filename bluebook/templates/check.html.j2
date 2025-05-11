@@ -21,13 +21,14 @@
                 <p class="incorrect-answer">✖ Incorrect!</p>
                 <p class="user-choice">You chose: {{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['option'] }}</p>
                 <p class="explanation">Why incorrect: {{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['explanation'] }}</p>
-
                 {% for choice in data['original_data']["questions"][q_index]['choices'] %}
                     {% if choice['is_correct'] %}
                         <p class="correct-answer">✔ Correct answer: {{ choice['option'] }}</p>
                         <p class="explanation">Why it is correct: {{ choice['explanation'] }}</p>
                     {% endif %}
                 {% endfor %}
+                <p class="study-recommendation">💡 Study Recommendation: </p>
+                <p class="explanation">{{ data['original_data']["questions"][q_index]['study_recommendation'] }}</p>
             {% endif %}
         </div>
     {% endfor %}
