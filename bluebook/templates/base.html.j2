@@ -17,7 +17,7 @@
 <div class="control-panel">
     <form class="control-panel-form" action="{{url_for('generate')}}" method="POST">
         <label for="num_of_questions">Number of questions:</label>
-        <select name="num_of_questions" id="num_of_questions">
+        <select name="num_of_questions" id="num_of_questions" class="question-dropdown">
             <option value="{{session['latest_num']}}">{{session['latest_num']}}</option>
             {% if session['latest_num'] != "2"%}<option value="2">2</option>{%endif%}
             {% if session['latest_num'] != "5"%}<option value="5">5</option>{%endif%}
@@ -26,14 +26,14 @@
         </select>
         <label for="additional_request" style="padding-top: 10px;">Topic to focus on (90 characters max):</label>
         {% if saved_topics['size'] %}
-            <select name="additional_request_preset" id="additional_request_preset">
-                <option value="">using textbox below</option>
+            <select name="additional_request_preset" id="additional_request_preset" class="question-dropdown">
+                <option value="">new topic</option>
                 {% for topic in saved_topics['requests'] %}
                     <option value="{{topic['request']}}">{{topic['request']}}</option>
                 {% endfor %}
             </select>
         {% endif %}
-        <input type="text" name="additional_request" id="additional_request">
+        <input type="text" name="additional_request" id="additional_request" style="display: block;margin-top: 10px;">
         <input type="submit" value="Generate" style="margin-top: 10px;" class="subtle-blue-btn">
     </form>
         <div class="control-panel-row">
@@ -62,4 +62,24 @@
 </div>
 {% block content %}
 {% endblock content %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const presetSelect = document.getElementById('additional_request_preset');
+        const textboxContainer = document.getElementById('additional_request');
+
+        function toggleTextbox() {
+            if (presetSelect.value === '' || presetSelect.value === 'using textbox below') {
+                textboxContainer.style.display = 'block';
+            } else {
+                textboxContainer.style.display = 'none';
+            }
+        }
+
+        // Initial check on load
+        toggleTextbox();
+
+        // On dropdown change
+        presetSelect.addEventListener('change', toggleTextbox);
+    });
+</script>
 </body>

@@ -5,9 +5,7 @@ import os
 import random
 import click
 import sqlalchemy.exc
-from bluebook import generator
-from bluebook import token_manager
-from bluebook import database_manager
+from bluebook import generator, token_manager, database_manager, data_models
 
 class Statistics:
     def __init__(self):
@@ -44,7 +42,7 @@ static_dir = os.path.join(app_dir, 'static')
 
 # Initialize the application and its state
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
-state: list[generator.Question] = [] # Essentially a list of gennerated questions
+state: list[data_models.Question] = [] # Essentially a list of gennerated questions
 app.secret_key = random.randbytes(32)
 db_manager = database_manager.Database()
 

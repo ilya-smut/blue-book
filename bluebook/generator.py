@@ -3,28 +3,9 @@ from pydantic import BaseModel
 import logging
 import bleach
 import re
+from bluebook import data_models
 
 logger = logging.getLogger("[Generator]")
-
-class Choice(BaseModel):
-    option: str
-    is_correct: bool
-    explanation: str
-
-    def escape(self):
-        self.option = bleach.clean(self.option)
-        self.explanation = bleach.clean(self.explanation)
-
-
-class Question(BaseModel):
-    question: str
-    choices: list[Choice]
-
-    def escape(self):
-        self.question = bleach.clean(self.question)
-        for choice in self.choices:
-            choice.escape()
-
 
 def sanitise_input(input: str):
     sanitized = ''
@@ -67,7 +48,7 @@ def ask_gemini(question_num, token, additional_request):
             contents=query,
             config={
                 'response_mime_type': 'application/json',
-                'response_schema': list[Question],
+                'response_schema': list[data_models.Question],
             },
         )
     # if server error, return empty list
@@ -76,7 +57,7 @@ def ask_gemini(question_num, token, additional_request):
         return []
 
     logger.debug(f"Response: {response.text}")
-    questions: list[Question] = response.parsed
+    questions: list[data_models.Question] = response.parsed
     for question in questions:
         question.escape()
     return questions
