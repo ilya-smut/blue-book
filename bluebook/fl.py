@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect
+from flask import Flask, render_template, request, session, redirect, jsonify
 from logging.config import dictConfig
 import google.genai.errors
 import os
@@ -201,6 +201,34 @@ def remove_saved_topic():
             app.logger.info(f'Topic was removed: {topic_to_delete}')
             set_additional_request(topic_to_delete) # To update session
     return redirect("/")
+
+
+@app.route('/save-question', methods=['POST'])
+def save_question():
+    ensure_session()
+    global state
+    if "q_index" in request.form:
+        question = state[int(request.form['q_index'])]
+        try:
+            question.saved = True
+            db_manager.add_question(question)
+            return jsonify({"message": f"Question {int(request.form['q_index'])} saved successfully."})
+        except sqlalchemy.exc.IntegrityError:
+            return jsonify({"message": f"Question {int(request.form['q_index'])} was already saved."})
+
+
+@app.route('/removed-saved-question', methods=['POST'])
+def remove_saved_question():
+    ensure_session()
+    global state
+    if "q_index" in request.form:
+        question = state[int(request.form['q_index'])]
+        try:
+            question.saved = False
+            db_manager.remove_question_by_id(question.id)
+            return jsonify({"message": f"Question {int(request.form['q_index'])} unsaved successfully."})
+        except:
+            return jsonify({"message": f"Question {int(request.form['q_index'])} was not found."})
 
 
 @click.group()

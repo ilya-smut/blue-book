@@ -17,6 +17,7 @@ class Questions(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     question: str
     study_recommendation: str
+    saved: bool | None
 
 
 class Choices(SQLModel, table=True):
@@ -70,21 +71,45 @@ class Database:
         with Session(self.engine) as session:
             session.exec(delete(ExtraRequest).where(ExtraRequest.request==request))
             session.commit()
+    
 
+    def select_question_by_value(self, question: str,  pydantic=False):
+        with Session(self.engine) as session:
+            if not pydantic:
+                return session.exec(select(Questions).where(Questions.question == question)).first()
+            else:
+                 if row:= session.exec(select(Questions).where(Questions.question == question)).first():
+                    choices_rows = session.exec(select(Choices).where(Choices.question_id == row.id))
+                    choices = list[data_models.Choice]()
+                    for choice_row in choices_rows:
+                        choices.append(data_models.Choice(
+                            option=choice_row.option,
+                            is_correct=choice_row.is_correct,
+                            explanation=choice_row.explanation
+                        ))
+                    question = data_models.Question(
+                        question=row.question,
+                        choices=choices,
+                        study_recommendation=row.study_recommendation,
+                        saved=True
+                    )
+                    return question
 
     def add_question(self, question: data_models.Question):
         with Session(self.engine) as session:
-            question_to_insert = Questions(question=question.question, study_recommendation=question.study_recommendation)
+            question_to_insert = Questions(question=question.question, study_recommendation=question.study_recommendation, saved=True)
+            session.add(question_to_insert)
+            session.commit()
+            assinged_id = self.select_question_by_value(question.question).id
             choices_to_map = list[Choices]()
             for choice in question.choices:
                 choice_to_insert = Choices(
                     option=choice.option, 
                     explanation=choice.explanation, 
                     is_correct=choice.is_correct, 
-                    question_id=question_to_insert.id
+                    question_id=assinged_id
                     )
                 choices_to_map.append(choice_to_insert)
-            session.add(question_to_insert)
             session.add_all(choices_to_map)
             session.commit()
     
@@ -112,12 +137,13 @@ class Database:
                     choices.append(data_models.Choice(
                         option=choice_row.option,
                         is_correct=choice_row.is_correct,
-                        explanation=choice_row.explanation
+                        explanation=choice_row.explanation,
                     ))
                 question = data_models.Question(
                     question=question_row.question,
                     choices=choices,
-                    study_recommendation=question_row.study_recommendation
+                    study_recommendation=question_row.study_recommendation,
+                    saved=True
                 )
                 pydantic_questions.append(question)
             return pydantic_questions
