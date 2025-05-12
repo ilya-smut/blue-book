@@ -5,7 +5,7 @@ import os
 import random
 import click
 import sqlalchemy.exc
-from bluebook import generator, token_manager, database_manager, data_models
+from bluebook import generator, token_manager, database_manager, data_models, confguration
 
 class Statistics:
     def __init__(self):
@@ -230,6 +230,17 @@ def remove_saved_question():
         except:
             return jsonify({"message": f"Question {int(request.form['q_index'])} was not found."})
 
+
+@app.route('/clear-persistent-storage', methods=['POST'])
+def clear_persistent_storage():
+    ensure_session()
+    global state
+    global db_manager
+    confguration.Configuration.SystemPath.clear_persistent()
+    for question in state:
+        question.saved = False
+    db_manager = database_manager.Database()
+    return redirect('/')
 
 @click.group()
 def bluebook():
