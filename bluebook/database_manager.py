@@ -91,9 +91,35 @@ class Database:
                         question=row.question,
                         choices=choices,
                         study_recommendation=row.study_recommendation,
-                        saved=True
+                        saved=True,
+                        persistent_id=row.id
                     )
                     return question
+    
+
+    def select_question_by_id(self, persistent_id: int,  pydantic=False):
+        with Session(self.engine) as session:
+            if not pydantic:
+                return session.exec(select(Questions).where(Questions.id == persistent_id)).first()
+            else:
+                 if row:= session.exec(select(Questions).where(Questions.id == persistent_id)).first():
+                    choices_rows = session.exec(select(Choices).where(Choices.question_id == row.id))
+                    choices = list[data_models.Choice]()
+                    for choice_row in choices_rows:
+                        choices.append(data_models.Choice(
+                            option=choice_row.option,
+                            is_correct=choice_row.is_correct,
+                            explanation=choice_row.explanation
+                        ))
+                    question = data_models.Question(
+                        question=row.question,
+                        choices=choices,
+                        study_recommendation=row.study_recommendation,
+                        saved=True,
+                        persistent_id=row.id
+                    )
+                    return question
+
 
     def add_question(self, question: data_models.Question):
         with Session(self.engine) as session:
@@ -143,7 +169,8 @@ class Database:
                     question=question_row.question,
                     choices=choices,
                     study_recommendation=question_row.study_recommendation,
-                    saved=True
+                    saved=True,
+                    persistent_id=question_row.id
                 )
                 pydantic_questions.append(question)
             return pydantic_questions

@@ -215,20 +215,20 @@ def save_question():
             return jsonify({"message": f"Question {int(request.form['q_index'])} saved successfully."})
         except sqlalchemy.exc.IntegrityError:
             return jsonify({"message": f"Question {int(request.form['q_index'])} was already saved."})
+        
 
-
-@app.route('/removed-saved-question', methods=['POST'])
+@app.route('/remove-saved-question/endpoint', methods=['POST'])
 def remove_saved_question():
     ensure_session()
-    global state
-    if "q_index" in request.form:
-        question = state[int(request.form['q_index'])]
+    if "persistent_id" in request.form:
+        id = int(request.form['persistent_id'])
         try:
-            question.saved = False
-            db_manager.remove_question_by_id(question.id)
-            return jsonify({"message": f"Question {int(request.form['q_index'])} unsaved successfully."})
+            db_manager.remove_question_by_id(id)
+            return redirect('/saved-questions')
         except:
-            return jsonify({"message": f"Question {int(request.form['q_index'])} was not found."})
+            return redirect('/saved-questions')
+    else:
+        return redirect('/saved-questions')
 
 
 @app.route('/clear-persistent-storage', methods=['POST'])

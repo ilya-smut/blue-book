@@ -22,6 +22,7 @@ class Question(BaseModel):
     choices: list[Choice]
     study_recommendation: str
     saved: bool | None # Optional field to identify if question is saved or not, in state. Not saved persistently.
+    persistent_id: int | None
 
     def escape(self):
         self.question = bleach.clean(self.question)
@@ -34,7 +35,8 @@ class Question(BaseModel):
             question = raw_question.question,
             choices = raw_question.choices,
             study_recommendation= raw_question.study_recommendation,
-            saved=None
+            saved=None,
+            persistent_id=None
         )
         return new_question
 
@@ -42,8 +44,20 @@ class Question(BaseModel):
 def serialize_questions(question_list: list[Question]):
     serialized = {"questions": [], "size":0}
     for question in question_list:
-        serialized['questions'].append({'question': question.question, 'choices':[], 'study_recommendation': question.study_recommendation, 'saved': question.saved})
+        serialized['questions'].append(
+            {
+                'question': question.question,
+                'choices':[],
+                'study_recommendation': question.study_recommendation, 
+                'saved': question.saved, 
+                'persistent_id': question.persistent_id
+            })
         for choice in question.choices:
-            serialized['questions'][-1]['choices'].append({'option': choice.option, 'is_correct': choice.is_correct, 'explanation': choice.explanation})
+            serialized['questions'][-1]['choices'].append(
+                {
+                    'option': choice.option, 
+                    'is_correct': choice.is_correct, 
+                    'explanation': choice.explanation
+                })
         serialized['size'] += 1
     return serialized

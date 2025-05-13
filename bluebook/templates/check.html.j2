@@ -30,7 +30,6 @@
                 <p class="study-recommendation">💡 Study Recommendation: </p>
                 <p class="explanation">{{ data['original_data']["questions"][q_index]['study_recommendation'] }}</p>
             {% endif %}
-            {% if not data['original_data']["questions"][q_index]['saved'] %}
                 <form>
                     <input type="hidden" name="q_index" value="{{ q_index }}">
                     <button type="button"
@@ -40,17 +39,6 @@
                         Save question
                     </button>
                 </form>
-            {% else %}
-                <form>
-                    <input type="hidden" name="q_index" value="{{ q_index }}">
-                    <button type="button"
-                            class="subtle-blue-btn"
-                            style="margin-top: 10px;"
-                            onclick="RemoveSavedQuestion(this)">
-                        Remove saved question
-                    </button>
-                </form>
-            {% endif %}
         </div>
     {% endfor %}
 <script>
@@ -70,24 +58,6 @@ function saveQuestion(buttonElement) {
     })
     .catch(error => {
         console.error("Error saving question:", error);
-    });
-}
-function RemoveSavedQuestion(buttonElement) {
-    const form = buttonElement.closest('form');
-    const formData = new FormData(form);
-
-    fetch("{{ url_for('remove_saved_question') }}", {
-        method: "POST",
-        body: formData,
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log("Unsaved:", data.message);
-        buttonElement.disabled = true;
-        buttonElement.textContent = "Unsaved";
-    })
-    .catch(error => {
-        console.error("Error deleting question:", error);
     });
 }
 </script>

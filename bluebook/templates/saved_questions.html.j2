@@ -12,8 +12,14 @@
                     > {{ serialised_questions["questions"][q_index]['choices'][ch_index]['option'] }}
                 </p>
         {% endfor %}
-        <button type="button" class="subtle-blue-btn" style="margin-top: 10px"
-                onclick="toggleDetails({{q_index}})">Details</button>
+        <div class="button-row">
+            <button type="button" class="subtle-blue-btn"
+                    onclick="toggleDetails({{q_index}})">Details</button>
+            <form class="control-button-form" action="{{url_for('remove_saved_question')}}" method="POST">
+                <input type="hidden" name="persistent_id" id="persistent_id" value="{{serialised_questions['questions'][q_index]['persistent_id']}}">
+                <button type="submit" class="subtle-blue-btn">Delete Question</button>
+            </form>
+        </div>
     </div>
     <div class="question-block" id="question-block-with-details-{{q_index}}" style="display: none;">
         <p><strong>{{ serialised_questions["questions"][q_index]['question'] }}</strong></p>
@@ -28,8 +34,14 @@
                 <p class="explanation">Why incorrect: {{ serialised_questions['questions'][q_index]['choices'][ch_index]['explanation'] }}</p>
             {%endif%}
         {% endfor %}
-        <button type="button" class="subtle-blue-btn" style="margin-top: 10px"
-                onclick="toggleDetails({{q_index}})">Hide</button>
+        <div class="button-row">
+            <button type="button" class="subtle-blue-btn"
+                    onclick="toggleDetails({{q_index}})">Hide</button>
+            <form class="control-button-form" action="{{url_for('remove_saved_question')}}" method="POST">
+                <input type="hidden" name="persistent_id" id="persistent_id" value="{{serialised_questions['questions'][q_index]['persistent_id']}}">
+                <button type="submit" class="subtle-blue-btn">Delete Question</button>
+            </form>
+        </div>
     </div>
 {% endfor %}
 
