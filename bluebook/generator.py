@@ -1,5 +1,4 @@
 from google import genai
-from pydantic import BaseModel
 import logging
 import bleach
 import re
@@ -35,7 +34,7 @@ def ask_gemini(question_num, token, additional_request):
             contents=query,
             config={
                 'response_mime_type': 'application/json',
-                'response_schema': list[data_models.Question],
+                'response_schema': list[data_models._RawQuestion],
             },
         )
     # if server error, return empty list
@@ -44,9 +43,11 @@ def ask_gemini(question_num, token, additional_request):
         return []
 
     logger.debug(f"Response: {response.text}")
-    questions: list[data_models.Question] = response.parsed
-    for question in questions:
-        question.escape()
+    raw_questions: list[data_models._RawQuestion] = response.parsed
+    questions = list[data_models.Question]()
+    for raw_question in raw_questions:
+        questions.append(data_models.Question.from_raw_question(raw_question))
+        questions[-1].escape()
     return questions
 
 

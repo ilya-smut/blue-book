@@ -11,6 +11,12 @@ class Choice(BaseModel):
         self.explanation = bleach.clean(self.explanation)
 
 
+class _RawQuestion(BaseModel):
+    question: str
+    choices: list[Choice]
+    study_recommendation: str
+
+
 class Question(BaseModel):
     question: str
     choices: list[Choice]
@@ -21,6 +27,16 @@ class Question(BaseModel):
         self.question = bleach.clean(self.question)
         for choice in self.choices:
             choice.escape()
+
+    @classmethod
+    def from_raw_question(cls, raw_question: _RawQuestion):
+        new_question = Question(
+            question = raw_question.question,
+            choices = raw_question.choices,
+            study_recommendation= raw_question.study_recommendation,
+            saved=None
+        )
+        return new_question
 
 
 def serialize_questions(question_list: list[Question]):
