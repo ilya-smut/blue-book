@@ -36,7 +36,9 @@
         <input type="text" name="additional_request" id="additional_request" style="display: block;margin-top: 10px;">
         <div class="button-row">
             <input type="submit" value="Generate" class="subtle-blue-btn">
-            <input type="submit" name="remove-saved-topic-button" id="remove-saved-topic-button" value="Delete saved topic" formaction="{{url_for('remove_saved_topic')}}" class="subtle-blue-btn">
+            {% if saved_topics['size'] %}
+                <input type="submit" name="remove-saved-topic-button" id="remove-saved-topic-button" value="Delete saved topic" formaction="{{url_for('remove_saved_topic')}}" class="subtle-blue-btn">
+            {% endif %}
         </div>
     </form>
         <div class="control-panel-row">
