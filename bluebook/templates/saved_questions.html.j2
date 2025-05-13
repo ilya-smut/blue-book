@@ -1,0 +1,13 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<div>
+    <p>Saved Questions</p>
+</div>
+{% for q_index in range(serialised_questions['size']) %}
+    <div>
+        <p><strong>{{ serialised_questions["questions"][q_index]['question'] }}</strong></p>
+    </div>
+{% endfor %}
+
+{% endblock content %}

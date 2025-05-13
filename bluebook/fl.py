@@ -193,8 +193,8 @@ def save_the_topic():
 @app.route('/remove-saved-topic', methods=['POST'])
 def remove_saved_topic():
     ensure_session()
-    if "topic" in request.form:
-        topic_to_delete = session['additional_request']['value']
+    if "additional_request_preset" in request.form:
+        topic_to_delete = request.form['additional_request_preset']
         if db_manager.select_extra_req_by_value(topic_to_delete):
             app.logger.debug(f'Attempting to delete saved topic: {topic_to_delete}')
             db_manager.remove_extra_request_by_value(topic_to_delete)
@@ -241,6 +241,15 @@ def clear_persistent_storage():
         question.saved = False
     db_manager = database_manager.Database()
     return redirect('/')
+
+
+@app.route('/saved-questions', methods=['GET'])
+def saved_questions():
+    ensure_session()
+    questions = db_manager.select_all_questions_pydantic()
+    serialised_questions = (data_models.serialize_questions(questions))
+    return render_template("saved_questions.html.j2", serialised_questions=serialised_questions, saved_topics=obtain_saved_topics())
+
 
 @click.group()
 def bluebook():

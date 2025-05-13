@@ -269,3 +269,14 @@ p {
   outline: none;
   background-color: #ffffff;
 }
+
+.button-row {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    margin-top: 0;
+    width: auto;
+    display: flex;
+    margin-top: 25px;
+}

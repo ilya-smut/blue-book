@@ -34,31 +34,26 @@
             </select>
         {% endif %}
         <input type="text" name="additional_request" id="additional_request" style="display: block;margin-top: 10px;">
-        <input type="submit" value="Generate" style="margin-top: 10px;" class="subtle-blue-btn">
+        <div class="button-row">
+            <input type="submit" value="Generate" class="subtle-blue-btn">
+            <input type="submit" name="remove-saved-topic-button" id="remove-saved-topic-button" value="Delete saved topic" formaction="{{url_for('remove_saved_topic')}}" class="subtle-blue-btn">
+        </div>
     </form>
         <div class="control-panel-row">
+                <form class="control-button-form" action="{{url_for('saved_questions')}}" method="GET">
+                    <button type="submit" class="subtle-blue-btn">Saved</button>
+                </form>
             {% if session['TOKEN_PRESENT'] %}
                 <form class="control-button-form" action="{{url_for('clear_token')}}" method="POST">
                     <input type="submit" value="Clear Token" class="subtle-blue-btn">
                 </form>
             {% endif %}
                 <form class="control-button-form" action="{{url_for('clear_persistent_storage')}}" method="POST">
-                    <input type="submit" value="Clear Persistent Storage" class="subtle-blue-btn">
+                    <input type="submit" value="Clear Memory" class="subtle-blue-btn">
                 </form>
             {% if session['submitted'] %}
                 <form class="control-button-form" action="{{url_for('wipe_questions')}}" method="POST">
                     <input type="submit" value="Wipe Questions" class="subtle-blue-btn">
-                </form>
-            {% endif %}
-            {% if session['additional_request']['set'] and not session['additional_request']['saved']%}
-                <form class="control-button-form" action="{{url_for('save_the_topic')}}" method="POST">
-                    <input type="hidden" id="topic" name="topic" value="{{session['additional_request']['value']}}">
-                    <input type="submit" value="Save Topic" class="subtle-blue-btn">
-                </form>
-            {% elif session['additional_request']['set'] and session['additional_request']['saved']%}
-                <form class="control-button-form" action="{{url_for('remove_saved_topic')}}" method="POST">
-                    <input type="hidden" id="topic" name="topic" value="{{session['additional_request']['value']}}">
-                    <input type="submit" value="Remove saved topic" class="subtle-blue-btn">
                 </form>
             {% endif %}
         </div>
@@ -83,6 +78,24 @@
 
         // On dropdown change
         presetSelect.addEventListener('change', toggleTextbox);
+    });
+    document.addEventListener('DOMContentLoaded', function (){
+        const presetSelect = document.getElementById('additional_request_preset');
+        const removeTopicButton = document.getElementById('remove-saved-topic-button');
+
+        function toggleRemoveTopicButton() {
+            if (presetSelect.value === '' || presetSelect.value === 'new topic') {
+                removeTopicButton.style.display = 'none';
+            } else {
+                removeTopicButton.style.display = 'block';
+            }
+        }
+
+        // Initial check on load
+        toggleRemoveTopicButton();
+
+        // On dropdown change
+        presetSelect.addEventListener('change', toggleRemoveTopicButton);
     });
 </script>
 </body>
