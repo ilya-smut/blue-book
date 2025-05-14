@@ -1,0 +1,61 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<div>
+    <p>Saved Questions</p>
+</div>
+{% for q_index in range(serialised_questions['size']) %}
+    <div class="question-block" id="question-block-no-details-{{q_index}}">
+        <p><strong>{{ serialised_questions["questions"][q_index]['question'] }}</strong></p>
+        {% for ch_index in range(4) %}
+                <p>
+                    > {{ serialised_questions["questions"][q_index]['choices'][ch_index]['option'] }}
+                </p>
+        {% endfor %}
+        <div class="button-row">
+            <button type="button" class="subtle-blue-btn"
+                    onclick="toggleDetails({{q_index}})">Details</button>
+            <form class="control-button-form" action="{{url_for('remove_saved_question')}}" method="POST">
+                <input type="hidden" name="persistent_id" id="persistent_id" value="{{serialised_questions['questions'][q_index]['persistent_id']}}">
+                <button type="submit" class="subtle-blue-btn">Delete Question</button>
+            </form>
+        </div>
+    </div>
+    <div class="question-block" id="question-block-with-details-{{q_index}}" style="display: none;">
+        <p><strong>{{ serialised_questions["questions"][q_index]['question'] }}</strong></p>
+        {% for ch_index in range(4) %}
+            {% if serialised_questions['questions'][q_index]['choices'][ch_index]["is_correct"] %}
+                <p class="correct-answer">✔ Correct!</p>
+                <p class="user-choice">{{ serialised_questions['questions'][q_index]['choices'][ch_index]['option'] }}</p>
+                <p class="explanation">Why it is correct: {{ serialised_questions['questions'][q_index]['choices'][ch_index]['explanation'] }}</p>
+            {% else %}
+                <p class="incorrect-answer">✖ Incorrect!</p>
+                <p class="user-choice">{{ serialised_questions['questions'][q_index]['choices'][ch_index]['option'] }}</p>
+                <p class="explanation">Why incorrect: {{ serialised_questions['questions'][q_index]['choices'][ch_index]['explanation'] }}</p>
+            {%endif%}
+        {% endfor %}
+        <div class="button-row">
+            <button type="button" class="subtle-blue-btn"
+                    onclick="toggleDetails({{q_index}})">Hide</button>
+            <form class="control-button-form" action="{{url_for('remove_saved_question')}}" method="POST">
+                <input type="hidden" name="persistent_id" id="persistent_id" value="{{serialised_questions['questions'][q_index]['persistent_id']}}">
+                <button type="submit" class="subtle-blue-btn">Delete Question</button>
+            </form>
+        </div>
+    </div>
+{% endfor %}
+
+<script>
+    function toggleDetails(index) {
+        const noDetails = document.getElementById(`question-block-no-details-${index}`);
+        const withDetails = document.getElementById(`question-block-with-details-${index}`);
+        if (noDetails.style.display === "none") {
+            noDetails.style.display = "block";
+            withDetails.style.display = "none";
+        } else {
+            noDetails.style.display = "none";
+            withDetails.style.display = "block";
+        }
+    }
+</script>
+{% endblock content %}

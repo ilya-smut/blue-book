@@ -1,6 +1,6 @@
-![Bluebook Logo](https://github.com/ilya-smut/blue-book/blob/main/bluebook/static/images/book.png)
+![Bluebook Logo](https://github.com/ilya-smut/blue-book/blob/main/bluebook/static/images/book.png?raw=true)
 # Blue Book
-![demo-gif](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/bluebook%20gif.gif)
+![demo-gif](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/bluebook%20gif.gif?raw=true)
 
 Blue Book is an application that generates multiple-choice questions for CompTIA Security+ preparation at the press of a button. It uses the Gemini API to generate questions and provides instant feedback on answers.
 
@@ -12,6 +12,7 @@ Blue Book is an application that generates multiple-choice questions for CompTIA
 - Save the chosen topic for future use. Access saved topics.
 - Submit answers and receive immediate feedback.
 - Get explanation of correct and incorrect answers to enhance learning.
+- Save questions for revision.
 - App can be run in a docker container with minimal setup.
 
 ## Installation

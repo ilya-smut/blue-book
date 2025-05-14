@@ -1,13 +1,11 @@
-from flask import Flask, render_template, request, session, redirect
+from flask import Flask, render_template, request, session, redirect, jsonify
 from logging.config import dictConfig
 import google.genai.errors
 import os
 import random
 import click
 import sqlalchemy.exc
-from bluebook import generator
-from bluebook import token_manager
-from bluebook import database_manager
+from bluebook import generator, token_manager, database_manager, data_models, confguration
 
 class Statistics:
     def __init__(self):
@@ -44,7 +42,7 @@ static_dir = os.path.join(app_dir, 'static')
 
 # Initialize the application and its state
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
-state: list[generator.Question] = [] # Essentially a list of gennerated questions
+state: list[data_models.Question] = [] # Essentially a list of gennerated questions
 app.secret_key = random.randbytes(32)
 db_manager = database_manager.Database()
 
@@ -115,7 +113,7 @@ def root():
     config = token_manager.load_config()
     ensure_session()
     global state
-    serialized_state = generator.serialize_questions(question_list=state)
+    serialized_state = data_models.serialize_questions(question_list=state)
     if not serialized_state:
         serialized_state['size'] = 0
     if token_manager.is_token_present(config):
@@ -161,7 +159,7 @@ def check():
     global state
     original_data = state
     statistics = Statistics()
-    data_out = {"original_data": generator.serialize_questions(original_data), "user_answers": {}, "is_answer_correct":{}, "statistics": {}}
+    data_out = {"original_data": data_models.serialize_questions(original_data), "user_answers": {}, "is_answer_correct":{}, "statistics": {}}
     for i in range(len(original_data)):
         if original_data[i].choices[int(user_answers[str(i)])].is_correct:
             app.logger.debug(f"Question {i} Correct!")
@@ -195,14 +193,62 @@ def save_the_topic():
 @app.route('/remove-saved-topic', methods=['POST'])
 def remove_saved_topic():
     ensure_session()
-    if "topic" in request.form:
-        topic_to_delete = session['additional_request']['value']
+    if "additional_request_preset" in request.form:
+        topic_to_delete = request.form['additional_request_preset']
         if db_manager.select_extra_req_by_value(topic_to_delete):
             app.logger.debug(f'Attempting to delete saved topic: {topic_to_delete}')
             db_manager.remove_extra_request_by_value(topic_to_delete)
             app.logger.info(f'Topic was removed: {topic_to_delete}')
             set_additional_request(topic_to_delete) # To update session
     return redirect("/")
+
+
+@app.route('/save-question', methods=['POST'])
+def save_question():
+    ensure_session()
+    global state
+    if "q_index" in request.form:
+        question = state[int(request.form['q_index'])]
+        try:
+            question.saved = True
+            db_manager.add_question(question)
+            return jsonify({"message": f"Question {int(request.form['q_index'])} saved successfully."})
+        except sqlalchemy.exc.IntegrityError:
+            return jsonify({"message": f"Question {int(request.form['q_index'])} was already saved."})
+        
+
+@app.route('/remove-saved-question/endpoint', methods=['POST'])
+def remove_saved_question():
+    ensure_session()
+    if "persistent_id" in request.form:
+        id = int(request.form['persistent_id'])
+        try:
+            db_manager.remove_question_by_id(id)
+            return redirect('/saved-questions')
+        except:
+            return redirect('/saved-questions')
+    else:
+        return redirect('/saved-questions')
+
+
+@app.route('/clear-persistent-storage', methods=['POST'])
+def clear_persistent_storage():
+    ensure_session()
+    global state
+    global db_manager
+    confguration.Configuration.SystemPath.clear_persistent()
+    for question in state:
+        question.saved = False
+    db_manager = database_manager.Database()
+    return redirect('/')
+
+
+@app.route('/saved-questions', methods=['GET'])
+def saved_questions():
+    ensure_session()
+    questions = db_manager.select_all_questions_pydantic()
+    serialised_questions = (data_models.serialize_questions(questions))
+    return render_template("saved_questions.html.j2", serialised_questions=serialised_questions, saved_topics=obtain_saved_topics())
 
 
 @click.group()

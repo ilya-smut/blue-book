@@ -13,6 +13,11 @@ os.makedirs(get_config_directory(), exist_ok=True)
 class Configuration:
 
     class SystemPath:
-           CONFIG_DIR = get_config_directory()
-           CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
-           DATABASE_PATH =os.path.join(CONFIG_DIR, "storage.db")
+        CONFIG_DIR = get_config_directory()
+        CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
+        DATABASE_PATH =os.path.join(CONFIG_DIR, "storage.db")
+        
+        @classmethod
+        def clear_persistent(cls):
+            if os.path.exists(cls.DATABASE_PATH):
+                os.remove(cls.DATABASE_PATH)

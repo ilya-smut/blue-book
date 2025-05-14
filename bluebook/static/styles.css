@@ -167,6 +167,14 @@ input[type="radio"] {
     padding-left: 10px;
 }
 
+/* Incorrect Answer Highlight */
+.study-recommendation {
+    color: rgb(196, 145, 51);
+    font-weight: bold;
+    border-left: 5px solid rgb(196, 145, 51);
+    padding-left: 10px;
+}
+
 /* User Choice */
 .user-choice {
     font-weight: bold;
@@ -243,3 +251,32 @@ p {
     box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.3);
   }
   
+  .question-dropdown {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  color: #333;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.question-dropdown:focus {
+  border-color: #007bff;
+  outline: none;
+  background-color: #ffffff;
+}
+
+.button-row {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    margin-top: 0;
+    width: auto;
+    display: flex;
+    margin-top: 25px;
+}
