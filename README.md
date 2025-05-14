@@ -12,6 +12,7 @@ Blue Book is an application that generates multiple-choice questions for CompTIA
 - Save the chosen topic for future use. Access saved topics.
 - Submit answers and receive immediate feedback.
 - Get explanation of correct and incorrect answers to enhance learning.
+- Save questions for revision.
 - App can be run in a docker container with minimal setup.
 
 ## Installation
