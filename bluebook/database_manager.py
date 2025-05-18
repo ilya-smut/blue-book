@@ -45,11 +45,11 @@ class Database:
         self.engine = create_engine(f"sqlite:///{Configuration.SystemPath.DATABASE_PATH}")
         SQLModel.metadata.create_all(self.engine)
         # Filling preset exams
-        with Session(self.engine) as session:
-            preset_exams =list[Exams]()
-            preset_exams.append(Exams(id=0, name='CompTIA Security+'))
-            preset_exams.append(Exams(id=1, name='Test'))
-            for exam in preset_exams:
+        preset_exams =list[Exams]()
+        preset_exams.append(Exams(id=0, name='CompTIA Security+'))
+        preset_exams.append(Exams(id=1, name='Test'))
+        for exam in preset_exams:
+            with Session(self.engine) as session:
                 try:
                     session.add(exam)
                     session.commit()
