@@ -8,46 +8,6 @@ import click
 import sqlalchemy.exc
 from bluebook import generator, token_manager, database_manager, data_models, confguration
 
-class Statistics:
-    def __init__(self):
-        self.all_num = 0
-        self.correct = 0
-    
-    def get_correct_num(self):
-        return self.correct
-    
-    def get_incorrect_num(self):
-        return self.all_num - self.correct
-    
-    def increment_correct(self):
-        self.correct += 1
-
-    def increment_all_num(self):
-        self.all_num += 1
-
-    def increment_both(self):
-        self.increment_all_num()
-        self.increment_correct()
-
-    def serialise(self):
-        return {"all": self.all_num, "correct": self.correct, "incorrect": self.get_incorrect_num()}
-
-
-# Compute the directory of the current file
-app_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Set the absolute paths for templates and static folders
-template_dir = os.path.join(app_dir, 'templates')
-static_dir = os.path.join(app_dir, 'static')
-
-
-# Initialize the application and its state
-app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
-state = {'question_list': list[data_models.Question](),
-                   'exam_id': 0} # Initial exam - always sec+ as for now
-app.secret_key = random.randbytes(32)
-db_manager = database_manager.Database()
-
 
 def state_to_json_string():
     global state
@@ -78,6 +38,9 @@ def set_additional_request(value):
 
 
 def ensure_session():
+    if state['init']:
+        state['init'] = False
+        switch_state(state['exam_id'])
     if 'submitted' not in session:
         session['submitted'] = False
     if 'additional_request' not in session:
@@ -101,6 +64,42 @@ def obtain_saved_topics():
 def obtain_exam_data():
     current_exam = db_manager.select_exam_by_id(state['exam_id'])
     return {'exam_list': db_manager.select_all_exams(), 'current_exam': current_exam}
+
+
+def switch_state(exam_id:int):
+    # Setting new state
+    state['exam_id'] = exam_id
+    loaded_state = db_manager.load_state(exam_id)
+    load_state_from_string(loaded_state['state_str'])
+    set_additional_request(loaded_state['additional_request'])
+    if state['question_list']:
+        session['submitted'] = True
+    else:
+        session['submitted'] = False
+
+
+def save_state():
+    # Saving current state (per exam)
+    current_exam_id = state['exam_id']
+    current_state_str = state_to_json_string()
+    app.logger.debug(f'saving current state -> {current_exam_id}; {current_state_str}')
+    db_manager.save_state(state_str=current_state_str, exam_id=current_exam_id, additional_request=session['additional_request']['value'])
+
+
+# Compute the directory of the current file
+app_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Set the absolute paths for templates and static folders
+template_dir = os.path.join(app_dir, 'templates')
+static_dir = os.path.join(app_dir, 'static')
+
+
+# Initialize the application and its state
+app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
+state = {'question_list': list[data_models.Question](),
+                   'exam_id': 0, 'init': True} # Initial exam - always sec+ as for now
+app.secret_key = random.randbytes(32)
+db_manager = database_manager.Database()
 
 
 @app.route("/generate", methods=['POST'])
@@ -181,7 +180,7 @@ def check():
     app.logger.debug(user_answers)
     global state
     original_data = state['question_list']
-    statistics = Statistics()
+    statistics = data_models.Statistics()
     data_out = {"original_data": data_models.serialize_questions(original_data), "user_answers": {}, "is_answer_correct":{}, "statistics": {}}
     for i in range(len(original_data)):
         if original_data[i].choices[int(user_answers[str(i)])].is_correct:
@@ -284,21 +283,12 @@ def set_exam():
         new_exam_id = int(request.form['exam-id'])
         app.logger.debug(f'setting new exam id -> {new_exam_id}')
 
-        # Saving previous state
-        current_exam_id = state['exam_id']
-        current_state_str = state_to_json_string()
-        app.logger.debug(f'saving current state -> {current_exam_id}; {current_state_str}')
-        db_manager.save_state(state_str=current_state_str, exam_id=current_exam_id, additional_request=session['additional_request']['value'])
-
-        # Setting new state
-        state['exam_id'] = new_exam_id
-        loaded_state = db_manager.load_state(new_exam_id)
-        load_state_from_string(loaded_state['state_str'])
-        set_additional_request(loaded_state['additional_request'])
-        if state['question_list']:
-            session['submitted'] = True
-        else:
-            session['submitted'] = False
+        if new_exam_id != state['exam_id']:
+            # Saving previous state
+            save_state()
+    
+            # Setting new state
+            switch_state(new_exam_id)
         
 
     return redirect('/')

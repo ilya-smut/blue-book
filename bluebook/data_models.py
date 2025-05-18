@@ -4,6 +4,30 @@ import logging
 
 logger = logging.getLogger('__dataModels__')
 
+class Statistics:
+    def __init__(self):
+        self.all_num = 0
+        self.correct = 0
+    
+    def get_correct_num(self):
+        return self.correct
+    
+    def get_incorrect_num(self):
+        return self.all_num - self.correct
+    
+    def increment_correct(self):
+        self.correct += 1
+
+    def increment_all_num(self):
+        self.all_num += 1
+
+    def increment_both(self):
+        self.increment_all_num()
+        self.increment_correct()
+
+    def serialise(self):
+        return {"all": self.all_num, "correct": self.correct, "incorrect": self.get_incorrect_num()}
+
 class Choice(BaseModel):
     option: str
     is_correct: bool
