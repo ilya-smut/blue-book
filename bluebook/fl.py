@@ -3,6 +3,7 @@ from logging.config import dictConfig
 import google.genai.errors
 import os
 import random
+import json
 import click
 import sqlalchemy.exc
 from bluebook import generator, token_manager, database_manager, data_models, confguration
@@ -42,9 +43,23 @@ static_dir = os.path.join(app_dir, 'static')
 
 # Initialize the application and its state
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
-state: list[data_models.Question] = [] # Essentially a list of gennerated questions
+state = {'question_list': list[data_models.Question](),
+                   'exam_id': 0} # Initial exam - always sec+ as for now
 app.secret_key = random.randbytes(32)
 db_manager = database_manager.Database()
+
+
+def state_to_json_string():
+    global state
+    questions = data_models.serialize_questions(state['question_list'])
+    str_questions = json.dumps(questions)
+    return str_questions
+
+
+def load_state_from_string(str_questions: str):
+    global state
+    questions = json.loads(str_questions)
+    state['question_list'] = data_models.load_questions(questions)
 
 
 def set_additional_request(value):
@@ -104,7 +119,7 @@ def generate():
     except google.genai.errors.ClientError:
         return render_template("token_prompt.html.j2")
     global state
-    state = gemini_response
+    state['question_list'] = gemini_response
     return root()
 
 
@@ -113,7 +128,7 @@ def root():
     config = token_manager.load_config()
     ensure_session()
     global state
-    serialized_state = data_models.serialize_questions(question_list=state)
+    serialized_state = data_models.serialize_questions(question_list=state['question_list'])
     if not serialized_state:
         serialized_state['size'] = 0
     if token_manager.is_token_present(config):
@@ -145,7 +160,7 @@ def wipe_questions():
     set_additional_request(False)
     session['latest_num'] = '2'
     global state
-    state = []
+    state['question_list'] = []
     if 'TOKEN_PRESENT' not in session:
         session['TOKEN_PRESENT'] = False
     return root()
@@ -157,7 +172,7 @@ def check():
     user_answers = {key: request.form[key] for key in request.form}
     app.logger.debug(user_answers)
     global state
-    original_data = state
+    original_data = state['question_list']
     statistics = Statistics()
     data_out = {"original_data": data_models.serialize_questions(original_data), "user_answers": {}, "is_answer_correct":{}, "statistics": {}}
     for i in range(len(original_data)):
@@ -208,7 +223,7 @@ def save_question():
     ensure_session()
     global state
     if "q_index" in request.form:
-        question = state[int(request.form['q_index'])]
+        question = state['question_list'][int(request.form['q_index'])]
         try:
             question.saved = True
             db_manager.add_question(question)
@@ -237,7 +252,7 @@ def clear_persistent_storage():
     global state
     global db_manager
     confguration.Configuration.SystemPath.clear_persistent()
-    for question in state:
+    for question in state['question_list']:
         question.saved = False
     db_manager = database_manager.Database()
     return redirect('/')

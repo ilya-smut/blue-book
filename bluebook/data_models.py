@@ -61,3 +61,22 @@ def serialize_questions(question_list: list[Question]):
                 })
         serialized['size'] += 1
     return serialized
+
+
+def load_questions(ser_question_list):
+    question_list = list[Question]()
+
+    for i in range(ser_question_list['size']):
+        choices = list[Choice]()
+        for choice_dict in ser_question_list['questions'][i]['choices']:
+            choices.append(Choice(option=choice_dict['option'],
+                                  is_correct=choice_dict['is_correct'],
+                                  explanation=choice_dict['explanation']))
+            
+        question_list.append(Question(question=ser_question_list['questions'][i]['question'],
+                                      choices=choices,
+                                      study_recommendation=ser_question_list['questions'][i]['study_recommendation'],
+                                      saved=ser_question_list['questions'][i]['saved'],
+                                      persistent_id=ser_question_list['questions'][i]['persistent_id']))
+    
+    return question_list

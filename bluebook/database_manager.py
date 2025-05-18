@@ -1,3 +1,4 @@
+import sqlalchemy.exc
 from sqlmodel import Field, SQLModel, Session, UniqueConstraint, create_engine, select, delete
 from bluebook.confguration import Configuration
 from bluebook import data_models
@@ -19,7 +20,6 @@ class Questions(SQLModel, table=True):
     study_recommendation: str
     saved: bool | None
 
-
 class Choices(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     option: str
@@ -27,12 +27,35 @@ class Choices(SQLModel, table=True):
     is_correct: bool
     question_id: int = Field(default=None, foreign_key="questions.id")
 
+class Exams(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("name"),)
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+
+class States(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("exam_id"),)
+    id: int | None = Field(default=None, primary_key=True)
+    exam_id: int = Field(default=None, foreign_key="exams.id")
+    state: str
+
 
 class Database:
     def __init__(self):
         # Setup the database
         self.engine = create_engine(f"sqlite:///{Configuration.SystemPath.DATABASE_PATH}")
         SQLModel.metadata.create_all(self.engine)
+        # Filling preset exams
+        with Session(self.engine) as session:
+            preset_exams =list[Exams]()
+            preset_exams.append(Exams(id=0, name='CompTIA Security+'))
+            preset_exams.append(Exams(id=1, name='Test'))
+            for exam in preset_exams:
+                try:
+                    session.add(exam)
+                    session.commit()
+                except sqlalchemy.exc.IntegrityError:
+                    pass # It is already there - all good.
+
 
     def select_all_extra_requests(self):
         with Session(self.engine) as session:
@@ -175,4 +198,18 @@ class Database:
                 pydantic_questions.append(question)
             return pydantic_questions
 
-        
+    
+    def save_state(self, state_str: str, exam_id: int):
+        state = States(exam_id=exam_id, state=state_str)
+        with Session(self.engine) as session:
+            session.add(state)
+            session.commit()
+    
+
+    def load_state_str(self, exam_id: int):
+        out_state_str = {'state_str':[], 'exam_id': exam_id}
+        with Session(self.engine) as session:
+            loaded_state = session.exec(select(States).where(States.exam_id == exam_id)).first()
+            if loaded_state:
+                out_state_str['state_str'] = loaded_state.state
+        return out_state_str
