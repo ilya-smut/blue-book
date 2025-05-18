@@ -58,8 +58,12 @@ def state_to_json_string():
 
 def load_state_from_string(str_questions: str):
     global state
-    questions = json.loads(str_questions)
-    state['question_list'] = data_models.load_questions(questions)
+    app.logger.debug(f'loading string -> {str_questions}; is it string? -> {type(str_questions) is str}')
+    try:
+        serialised_questions = json.loads(str_questions)
+    except:
+        serialised_questions = {'questions': [], 'size': 0}
+    state['question_list'] = data_models.load_questions(serialised_questions)
 
 
 def set_additional_request(value):
@@ -93,6 +97,10 @@ def obtain_saved_topics():
     for topic in all_saved_topics:
         data['requests'].append(topic.to_dict())
     return data
+
+def obtain_exam_data():
+    current_exam = db_manager.select_exam_by_id(state['exam_id'])
+    return {'exam_list': db_manager.select_all_exams(), 'current_exam': current_exam}
 
 
 @app.route("/generate", methods=['POST'])
@@ -136,7 +144,7 @@ def root():
     else:
         session['TOKEN_PRESENT'] = False
     #app.logger.debug(serialized_state)
-    return render_template("root.html.j2", data=serialized_state, saved_topics=obtain_saved_topics())
+    return render_template("root.html.j2", data=serialized_state, saved_topics=obtain_saved_topics(), exams=obtain_exam_data())
 
 
 @app.route("/save_token", methods=["POST"])
@@ -188,7 +196,7 @@ def check():
             statistics.increment_all_num()
     data_out['statistics'] = statistics.serialise()
     app.logger.debug(data_out)
-    return render_template("check.html.j2", data=data_out, saved_topics=obtain_saved_topics())
+    return render_template("check.html.j2", data=data_out, saved_topics=obtain_saved_topics(), exams=obtain_exam_data())
 
 
 @app.route('/save-the-topic', methods=['POST'])
@@ -263,8 +271,37 @@ def saved_questions():
     ensure_session()
     questions = db_manager.select_all_questions_pydantic()
     serialised_questions = (data_models.serialize_questions(questions))
-    return render_template("saved_questions.html.j2", serialised_questions=serialised_questions, saved_topics=obtain_saved_topics())
+    return render_template("saved_questions.html.j2", 
+                           serialised_questions=serialised_questions, 
+                           saved_topics=obtain_saved_topics(), 
+                           exams=obtain_exam_data())
 
+
+@app.route('/set-exam', methods=['POST'])
+def set_exam():
+    ensure_session()
+    if 'exam-id' in request.form:
+        new_exam_id = int(request.form['exam-id'])
+        app.logger.debug(f'setting new exam id -> {new_exam_id}')
+
+        # Saving previous state
+        current_exam_id = state['exam_id']
+        current_state_str = state_to_json_string()
+        app.logger.debug(f'saving current state -> {current_exam_id}; {current_state_str}')
+        db_manager.save_state(state_str=current_state_str, exam_id=current_exam_id, additional_request=session['additional_request']['value'])
+
+        # Setting new state
+        state['exam_id'] = new_exam_id
+        loaded_state = db_manager.load_state(new_exam_id)
+        load_state_from_string(loaded_state['state_str'])
+        set_additional_request(loaded_state['additional_request'])
+        if state['question_list']:
+            session['submitted'] = True
+        else:
+            session['submitted'] = False
+        
+
+    return redirect('/')
 
 @click.group()
 def bluebook():
@@ -283,6 +320,7 @@ def start(debug):
     if debug:
         dictConfig({
             'version': 1,
+            'disable_existing_loggers': False,
             'formatters': {'default': {
                 'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
             }},
@@ -294,12 +332,20 @@ def start(debug):
             'root': {
                 'level': 'INFO',
                 'handlers': ['wsgi']
+            },
+            'loggers': {
+                'bluebook.database_manager': {
+                'level': 'DEBUG',
+                'handlers': ['wsgi'],
+                'propagate': False
+                }
             }
         })
         app.run("0.0.0.0", "5000", True, True)
     else:
         dictConfig({
             'version': 1,
+            'disable_existing_loggers': False,
             'formatters': {'default': {
                 'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
             }},

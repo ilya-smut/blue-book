@@ -2,6 +2,9 @@ import sqlalchemy.exc
 from sqlmodel import Field, SQLModel, Session, UniqueConstraint, create_engine, select, delete
 from bluebook.confguration import Configuration
 from bluebook import data_models
+import logging
+
+logger = logging.getLogger('bluebook.database_manager')
 
 
 # Data Models
@@ -37,6 +40,7 @@ class States(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     exam_id: int = Field(default=None, foreign_key="exams.id")
     state: str
+    additional_request: str | None
 
 
 class Database:
@@ -199,17 +203,48 @@ class Database:
             return pydantic_questions
 
     
-    def save_state(self, state_str: str, exam_id: int):
-        state = States(exam_id=exam_id, state=state_str)
+    def save_state(self, state_str: str, exam_id: int, additional_request: str = None):
+        logger.debug(f'Save state received following string -> {state_str}; with exam id={exam_id} and additional request={additional_request}')
         with Session(self.engine) as session:
-            session.add(state)
+            state_obj = session.exec(select(States).where(States.exam_id == exam_id)).first()
+            if state_obj:
+                logger.debug(f'Updating existing state record.')
+                state_obj.state = state_str
+                state_obj.additional_request = additional_request
+                session.add(state_obj)
+            else:
+                logger.debug(f'Creating new state record.')
+                new_state = States(exam_id=exam_id, state=state_str, additional_request=additional_request)
+                session.add(new_state)
             session.commit()
     
 
-    def load_state_str(self, exam_id: int):
-        out_state_str = {'state_str':[], 'exam_id': exam_id}
+    def load_state(self, exam_id: int):
+        out_state_str = {'state_str':'', 'exam_id': exam_id, 'additional_request': None}
         with Session(self.engine) as session:
             loaded_state = session.exec(select(States).where(States.exam_id == exam_id)).first()
             if loaded_state:
                 out_state_str['state_str'] = loaded_state.state
+                out_state_str['additional_request'] = loaded_state.additional_request
+        logger.debug(f'For exam id {exam_id} loaded state_str {out_state_str}')
         return out_state_str
+    
+
+    def select_all_exams(self) -> list[dict]:
+        exams = []
+        with Session(self.engine) as session:
+            exams_rows = session.exec(select(Exams))
+            for row in exams_rows:
+                exams.append({'id': row.id, 'name': row.name})
+        return exams
+
+
+    def select_exam_by_id(self, exam_id: int):
+        data_out = {}
+        with Session(self.engine) as session:
+            exam_row = session.exec(select(Exams).where(Exams.id == exam_id)).first()
+            if exam_row:
+                data_out['id'] = exam_row.id,
+                data_out['name'] = exam_row.name
+        return data_out
+        

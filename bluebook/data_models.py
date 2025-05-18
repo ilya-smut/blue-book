@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 import bleach
+import logging
+
+logger = logging.getLogger('__dataModels__')
 
 class Choice(BaseModel):
     option: str
@@ -64,7 +67,10 @@ def serialize_questions(question_list: list[Question]):
 
 
 def load_questions(ser_question_list):
+    logger.debug(f'Loading serialised list of questions: {ser_question_list}')
     question_list = list[Question]()
+    if not ser_question_list['questions']:
+        return question_list
 
     for i in range(ser_question_list['size']):
         choices = list[Choice]()
