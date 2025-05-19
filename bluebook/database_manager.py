@@ -52,10 +52,12 @@ class Database:
         self.exam_id = exam_id
         self.engine = create_engine(f"sqlite:///{Configuration.SystemPath.DATABASE_PATH}")
         SQLModel.metadata.create_all(self.engine)
-        # Filling preset exams
+
+        # Initialising built-in exams
         preset_exams =list[Exams]()
         preset_exams.append(Exams(id=0, name='CompTIA Security+'))
-        preset_exams.append(Exams(id=1, name='Test'))
+        preset_exams.append(Exams(id=1, name='CompTIA A+'))
+        preset_exams.append(Exams(id=2, name='CompTIA Network+'))
         for exam in preset_exams:
             with Session(self.engine) as session:
                 try:

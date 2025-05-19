@@ -128,7 +128,10 @@ def generate():
         app.logger.debug(f"Generating {num_of_questions} new questions with additional request {additional_request}")
         set_additional_request(additional_request)
     try:
-        gemini_response = generator.ask_gemini(num_of_questions, config['API_TOKEN'], additional_request=additional_request)
+        gemini_response = generator.ask_gemini(exam_name=obtain_exam_data()['current_exam']['name'],
+                                                question_num=num_of_questions,
+                                                token=config['API_TOKEN'],
+                                                additional_request=additional_request)
     except google.genai.errors.ClientError:
         return render_template("token_prompt.html.j2")
     global state
