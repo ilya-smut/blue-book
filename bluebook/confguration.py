@@ -5,7 +5,7 @@ def get_config_directory():
     if os.name == "nt":  # Windows
         return os.path.join(os.getenv("APPDATA"), "bluebook")
     else:  # macOS/Linux
-        return os.path.join(os.path.expanduser("~"), ".config", "bluebook")
+        return os.path.join(os.path.expanduser("~"), ".bluebook")
 
 # Ensuring config directory exists
 os.makedirs(get_config_directory(), exist_ok=True)
