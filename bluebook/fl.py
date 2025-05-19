@@ -63,7 +63,9 @@ def obtain_saved_topics():
 
 def obtain_exam_data():
     current_exam = db_manager.select_exam_by_id(state['exam_id'])
-    exam_data = {'exam_list': db_manager.select_all_exams(), 'current_exam': current_exam}
+    exam_data =  {'exam_list': db_manager.select_all_exams(),
+                  'current_exam': current_exam,
+                  'built-in-indices': db_manager.get_built_in_indices()}
     app.logger.debug(f"Exam data obtained: {exam_data}")
     return exam_data
 
@@ -299,6 +301,32 @@ def set_exam():
         
 
     return redirect('/')
+
+
+@app.route('/exam-constructor', methods=['GET'])
+def exam_constructor():
+    ensure_session()
+    custom = {'header': 'Exam Constructor'}
+    return render_template('exam_constructor.html.j2', custom=custom, exams=obtain_exam_data())
+
+@app.route('/exam-constructor/add-custom-exam', methods=['POST'])
+def add_custom_exam():
+    ensure_session()
+    if 'new-exam-name' in request.form:
+        exam_name = generator.sanitise_input(request.form['new-exam-name'])
+        if exam_name:
+            db_manager.add_new_exam(exam_name=exam_name)
+    return redirect('/exam-constructor')
+
+@app.route('/exam-constructor/delete-custom-exam', methods=['POST'])
+def delete_custom_exam():
+    ensure_session()
+    if "exam-id" in request.form:
+        exam_id = int(request.form['exam-id'])
+        db_manager.delete_exam(exam_id=exam_id)
+        if state['exam_id'] == exam_id:
+            switch_state(confguration.Configuration.DefaultValues.DEFAULT_EXAM_ID) # Switch back to default starting exam
+    return redirect('/exam-constructor')
 
 @click.group()
 def bluebook():

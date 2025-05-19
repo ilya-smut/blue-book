@@ -46,10 +46,11 @@ class States(SQLModel, table=True):
 
 
 class Database:
-    def __init__(self, exam_id=0):
+    def __init__(self, exam_id=Configuration.DefaultValues.DEFAULT_EXAM_ID):
         # Default starting exam is CompTIA Security+ (exam_id=0)
         # Setup the database
         self.exam_id = exam_id
+        self.built_in_indices = set()
         self.engine = create_engine(f"sqlite:///{Configuration.SystemPath.DATABASE_PATH}")
         SQLModel.metadata.create_all(self.engine)
 
@@ -63,8 +64,14 @@ class Database:
                 try:
                     session.add(exam)
                     session.commit()
+                    self.built_in_indices.add(exam.id)
                 except sqlalchemy.exc.IntegrityError:
-                    pass # It is already there - all good.
+                    self.built_in_indices.add(exam.id)
+                    # It is already there - all good.
+    
+    # List of built-in exams. Will be used to avoid deleting built-in exams.
+    def get_built_in_indices(self):
+        return list(self.built_in_indices)
 
 
     def select_all_extra_requests(self):
@@ -253,4 +260,28 @@ class Database:
                 data_out = {'id': exam_row.id, 'name': exam_row.name}
         logger.debug(f'Exam selected by id=={exam_id} --> {data_out}')
         return data_out
+    
+    
+    def add_new_exam(self, exam_name: str):
+        exam = Exams(name=exam_name)
+        with Session(self.engine) as session:
+            try:
+                session.add(exam)
+                session.commit()
+            except sqlalchemy.exc.IntegrityError:
+                pass # It is already there - all good.
+    
+    def delete_exam(self, exam_id: int):
+        if exam_id not in self.built_in_indices:
+            with Session(self.engine) as session:
+                mapped_question_ids = session.exec(select(Questions.id).where(Questions.exam_id == exam_id)).all()
+                for question_id in mapped_question_ids:
+                    session.exec(delete(Choices).where(Choices.question_id == question_id))
+                    session.exec(delete(Questions).where(Questions.id == question_id))
+                session.exec(delete(ExtraRequest).where(ExtraRequest.exam_id == exam_id))
+                session.exec(delete(States).where(States.exam_id == exam_id))
+                session.exec(delete(Exams).where(Exams.id == exam_id))
+                session.commit()
+
+
         

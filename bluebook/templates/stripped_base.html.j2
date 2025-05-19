@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluebook</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/book.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+<p><a href="{{url_for('root')}}"><img src="{{ url_for('static', filename='images/book.svg') }}" width="100" height="120"></a></p>
+<h1>Student Bluebook: {{custom['header']}}</h1>
+{% block content %}
+{% endblock content %}
+</body>

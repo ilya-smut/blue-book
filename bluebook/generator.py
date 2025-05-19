@@ -9,10 +9,10 @@ logger = logging.getLogger("[Generator]")
 def sanitise_input(input: str):
     sanitized = ''
     if len(input) > 90:
-        sanitized = re.sub('[^0-9a-zA-Z ]+', '', input[:90])
+        sanitized = re.sub('[^0-9a-zA-Z ]+-', '', input[:90])
         sanitized = bleach.clean(sanitized)
     else:
-        sanitized = re.sub('[^0-9a-zA-Z ]+', '', input)
+        sanitized = re.sub('[^0-9a-zA-Z ]+-', '', input)
         sanitized = bleach.clean(sanitized)
     return sanitized
 

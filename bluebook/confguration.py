@@ -21,3 +21,6 @@ class Configuration:
         def clear_persistent(cls):
             if os.path.exists(cls.DATABASE_PATH):
                 os.remove(cls.DATABASE_PATH)
+    
+    class DefaultValues:
+        DEFAULT_EXAM_ID = 0     # CompTIA Security+ as a default exam
