@@ -68,7 +68,10 @@ def obtain_exam_data():
 
 def switch_state(exam_id:int):
     # Setting new state
+    global state
+    global db_manager
     state['exam_id'] = exam_id
+    db_manager = database_manager.Database(exam_id=exam_id)
     loaded_state = db_manager.load_state(exam_id)
     load_state_from_string(loaded_state['state_str'])
     set_additional_request(loaded_state['additional_request'])
@@ -76,6 +79,7 @@ def switch_state(exam_id:int):
         session['submitted'] = True
     else:
         session['submitted'] = False
+    
 
 
 def save_state():
@@ -282,12 +286,10 @@ def set_exam():
     if 'exam-id' in request.form:
         new_exam_id = int(request.form['exam-id'])
         app.logger.debug(f'setting new exam id -> {new_exam_id}')
-
+        # Saving existing state
+        save_state()
+        # Switching to a new state if different from current
         if new_exam_id != state['exam_id']:
-            # Saving previous state
-            save_state()
-    
-            # Setting new state
             switch_state(new_exam_id)
         
 

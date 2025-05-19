@@ -11,7 +11,8 @@ logger = logging.getLogger('bluebook.database_manager')
 class ExtraRequest(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("request"),)
     id: int | None = Field(default=None, primary_key=True)
-    request: str 
+    request: str
+    exam_id: int = Field(default=None, foreign_key="exams.id")
 
     def to_dict(self):
         return {'id': self.id, 'request': self.request}
@@ -22,6 +23,7 @@ class Questions(SQLModel, table=True):
     question: str
     study_recommendation: str
     saved: bool | None
+    exam_id: int = Field(default=None, foreign_key="exams.id")
 
 class Choices(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -44,8 +46,10 @@ class States(SQLModel, table=True):
 
 
 class Database:
-    def __init__(self):
+    def __init__(self, exam_id=0):
+        # Default starting exam is CompTIA Security+ (exam_id=0)
         # Setup the database
+        self.exam_id = exam_id
         self.engine = create_engine(f"sqlite:///{Configuration.SystemPath.DATABASE_PATH}")
         SQLModel.metadata.create_all(self.engine)
         # Filling preset exams
@@ -63,7 +67,7 @@ class Database:
 
     def select_all_extra_requests(self):
         with Session(self.engine) as session:
-            return session.exec(select(ExtraRequest)).all()
+            return session.exec(select(ExtraRequest).where(ExtraRequest.exam_id==self.exam_id)).all()
     
     def select_extra_req_by_id(self, id: int | str):
         if type(id) is str:
@@ -72,14 +76,14 @@ class Database:
             except:
                 pass
         with Session(self.engine) as session:
-            return session.exec(select(ExtraRequest).where(ExtraRequest.id==id)).first()
+            return session.exec(select(ExtraRequest).where(ExtraRequest.id==id, ExtraRequest.exam_id==self.exam_id)).first()
 
     def select_extra_req_by_value(self, request: str):
         with Session(self.engine) as session:
-            return session.exec(select(ExtraRequest).where(ExtraRequest.request == request)).first()
+            return session.exec(select(ExtraRequest).where(ExtraRequest.request == request, ExtraRequest.exam_id==self.exam_id)).first()
     
     def add_extra_request(self, request: int):
-        extra_request = ExtraRequest(request=request)
+        extra_request = ExtraRequest(request=request, exam_id=self.exam_id)
         with Session(self.engine) as session:
             session.add(extra_request)
             session.commit()
@@ -91,21 +95,21 @@ class Database:
             except:
                 pass
         with Session(self.engine) as session:
-            session.exec(delete(ExtraRequest).where(ExtraRequest.id==id))
+            session.exec(delete(ExtraRequest).where(ExtraRequest.id==id, ExtraRequest.exam_id==self.exam_id))
             session.commit()
     
     def remove_extra_request_by_value(self, request):
         with Session(self.engine) as session:
-            session.exec(delete(ExtraRequest).where(ExtraRequest.request==request))
+            session.exec(delete(ExtraRequest).where(ExtraRequest.request==request, ExtraRequest.exam_id==self.exam_id))
             session.commit()
     
 
     def select_question_by_value(self, question: str,  pydantic=False):
         with Session(self.engine) as session:
             if not pydantic:
-                return session.exec(select(Questions).where(Questions.question == question)).first()
+                return session.exec(select(Questions).where(Questions.question == question, Questions.exam_id == self.exam_id)).first()
             else:
-                 if row:= session.exec(select(Questions).where(Questions.question == question)).first():
+                 if row:= session.exec(select(Questions).where(Questions.question == question, Questions.exam_id == self.exam_id)).first():
                     choices_rows = session.exec(select(Choices).where(Choices.question_id == row.id))
                     choices = list[data_models.Choice]()
                     for choice_row in choices_rows:
@@ -127,9 +131,9 @@ class Database:
     def select_question_by_id(self, persistent_id: int,  pydantic=False):
         with Session(self.engine) as session:
             if not pydantic:
-                return session.exec(select(Questions).where(Questions.id == persistent_id)).first()
+                return session.exec(select(Questions).where(Questions.id == persistent_id, Questions.exam_id == self.exam_id)).first()
             else:
-                 if row:= session.exec(select(Questions).where(Questions.id == persistent_id)).first():
+                 if row:= session.exec(select(Questions).where(Questions.id == persistent_id, Questions.exam_id == self.exam_id)).first():
                     choices_rows = session.exec(select(Choices).where(Choices.question_id == row.id))
                     choices = list[data_models.Choice]()
                     for choice_row in choices_rows:
@@ -150,7 +154,7 @@ class Database:
 
     def add_question(self, question: data_models.Question):
         with Session(self.engine) as session:
-            question_to_insert = Questions(question=question.question, study_recommendation=question.study_recommendation, saved=True)
+            question_to_insert = Questions(question=question.question, study_recommendation=question.study_recommendation, saved=True, exam_id=self.exam_id)
             session.add(question_to_insert)
             session.commit()
             assinged_id = self.select_question_by_value(question.question).id
@@ -169,10 +173,10 @@ class Database:
 
     def remove_question_by_id(self, question_id: int):
         with Session(self.engine) as session:
-            if question:= session.exec(select(Questions).where(Questions.id == question_id)).first():
+            if question:= session.exec(select(Questions).where(Questions.id == question_id, Questions.exam_id == self.exam_id)).first():
                 # Question found
                 session.exec(delete(Choices).where(Choices.question_id == question.id))
-                session.exec(delete(Questions).where(Questions.id == question.id))
+                session.exec(delete(Questions).where(Questions.id == question.id, Questions.exam_id == self.exam_id))
                 session.commit()
             else:
                 # Question not found
@@ -182,7 +186,7 @@ class Database:
     def select_all_questions_pydantic(self):
         with Session(self.engine) as session:
             pydantic_questions = list[data_models.Question]()
-            all_rows = session.exec(select(Questions))
+            all_rows = session.exec(select(Questions).where(Questions.exam_id == self.exam_id))
             for question_row in all_rows:
                 choices_rows = session.exec(select(Choices).where(Choices.question_id == question_row.id))
                 choices = list[data_models.Choice]()
