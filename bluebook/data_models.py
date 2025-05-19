@@ -2,7 +2,7 @@ from pydantic import BaseModel
 import bleach
 import logging
 
-logger = logging.getLogger('__dataModels__')
+logger = logging.getLogger('bluebook.data_models')
 
 class Statistics:
     def __init__(self):
@@ -91,7 +91,7 @@ def serialize_questions(question_list: list[Question]):
 
 
 def load_questions(ser_question_list):
-    logger.debug(f'Loading serialised list of questions: {ser_question_list}')
+    #logger.debug(f'Loading serialised list of questions: {ser_question_list}')
     question_list = list[Question]()
     if not ser_question_list['questions']:
         return question_list

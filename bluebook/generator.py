@@ -4,7 +4,7 @@ import bleach
 import re
 from bluebook import data_models
 
-logger = logging.getLogger("[Generator]")
+logger = logging.getLogger("bluebook.generator")
 
 def sanitise_input(input: str):
     sanitized = ''
@@ -67,8 +67,7 @@ def ask_gemini(exam_name, question_num, token, additional_request):
     except genai.errors.ServerError as e:
         logger.error(f"Client error: {e}")
         return []
-
-    logger.debug(f"Response: {response.text}")
+    
     raw_questions: list[data_models._RawQuestion] = response.parsed
     questions = list[data_models.Question]()
     for raw_question in raw_questions:

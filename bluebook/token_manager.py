@@ -5,7 +5,7 @@ from flask import render_template
 from bluebook.confguration import Configuration
 
 # Initialize the logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("bluebook.token_manager")
 
 
 # Function to load configuration

@@ -9,19 +9,32 @@ import sqlalchemy.exc
 from bluebook import generator, token_manager, database_manager, data_models, confguration
 
 
+def concatenate_state_log(state_log: dict = None):
+    if not state_log:
+        global state
+        num_of_questions =str(len(state['question_list']))
+        return f"State[ {num_of_questions} questions, exam_id={state['exam_id']}, is_init={state['init']}]"
+    else:
+        num_of_questions =str(len(state_log['question_list']))
+        return f"State[ {num_of_questions} questions, exam_id={state_log['exam_id']}, is_init={state_log['init']}]"
+
+
 def state_to_json_string():
     global state
     questions = data_models.serialize_questions(state['question_list'])
     str_questions = json.dumps(questions)
+    app.logger.debug(f"State [{concatenate_state_log()}] dumped to a json string.")
     return str_questions
 
 
 def load_state_from_string(str_questions: str):
     global state
-    app.logger.debug(f'loading string -> {str_questions}; is it string? -> {type(str_questions) is str}')
+    app.logger.debug(f'Loading string into state; string length={len(str_questions)}.')
     try:
         serialised_questions = json.loads(str_questions)
+        app.logger.debug("State string deserialised to python object successfully.")
     except:
+        app.logger.debug("Invalid string. Reverting to {'questions': [], 'size': 0}.")
         serialised_questions = {'questions': [], 'size': 0}
     state['question_list'] = data_models.load_questions(serialised_questions)
 
@@ -29,8 +42,10 @@ def load_state_from_string(str_questions: str):
 def set_additional_request(value):
     if not value:
         session['additional_request'] = {'set': False, 'value': '', 'saved': False}
+        app.logger.debug("Additional request cleared.")
     else:
         saved_request = db_manager.select_extra_req_by_value(value)
+        app.logger.debug(f"Additional request set to {value}")
         if saved_request:
             session['additional_request'] = {'set': True, 'value': value, 'saved': True}
         else:
@@ -43,12 +58,15 @@ def ensure_session():
         switch_state(state['exam_id'])
     if 'submitted' not in session:
         session['submitted'] = False
+        app.logger.debug(f"session['submitted'] initialised to False.")
     if 'additional_request' not in session:
         set_additional_request(False)
     if 'latest_num' not in session:
         session['latest_num'] = '2'
+        app.logger.debug(f"session['latest_num'] initialised to 2.")
     if 'TOKEN_PRESENT' not in session:
         session['TOKEN_PRESENT'] = False
+        app.logger.debug(f"session['TOKEN_PRESENT'] initialised to False.")
 
 
 def obtain_saved_topics():
@@ -59,6 +77,7 @@ def obtain_saved_topics():
     data['requests'] = []
     for topic in all_saved_topics:
         data['requests'].append(topic.to_dict())
+    app.logger.debug(f"Saved topics retrieved for exam_id={state['exam_id']}. Size={data['size']}")
     return data
 
 def obtain_exam_data():
@@ -66,11 +85,13 @@ def obtain_exam_data():
     exam_data =  {'exam_list': db_manager.select_all_exams(),
                   'current_exam': current_exam,
                   'built-in-indices': db_manager.get_built_in_indices()}
-    app.logger.debug(f"Exam data obtained: {exam_data}")
+    app.logger.debug(f"Exam data retrieved: {len(exam_data['exam_list'])} exams, current: name='{exam_data['current_exam']['name']}', id={exam_data['current_exam']['id']}")
     return exam_data
 
 
 def switch_state(exam_id:int):
+    app.logger.debug(f'Switching state to exam_id={exam_id}')
+    app.logger.debug(f'Initial state: {concatenate_state_log()}')
     # Setting new state
     global state
     global db_manager
@@ -81,8 +102,11 @@ def switch_state(exam_id:int):
     set_additional_request(loaded_state['additional_request'])
     if state['question_list']:
         session['submitted'] = True
+        app.logger.debug(f"session['submitted'] changed to True.")
     else:
         session['submitted'] = False
+        app.logger.debug(f"session['submitted'] changed to False.")
+    app.logger.debug(f"New state: {concatenate_state_log()}")
     
 
 
@@ -90,7 +114,7 @@ def save_state():
     # Saving current state (per exam)
     current_exam_id = state['exam_id']
     current_state_str = state_to_json_string()
-    app.logger.debug(f'saving current state -> {current_exam_id}; {current_state_str}')
+    app.logger.debug(f'Saving state: {concatenate_state_log()}')
     db_manager.save_state(state_str=current_state_str, exam_id=current_exam_id, additional_request=session['additional_request']['value'])
 
 
@@ -114,11 +138,18 @@ db_manager = database_manager.Database()
 def generate():
     config = token_manager.load_config()
     ensure_session()
+
     if token_page:= token_manager.ensure_token(config):
+        app.logger.debug(f"Token not found. Sending token page.")
         return token_page
+    
     session['submitted'] = True
+    app.logger.debug(f"session['submitted'] set to True")
+
     num_of_questions = int(request.form['num_of_questions'])
     session['latest_num'] = str(num_of_questions)
+    app.logger.debug(f"session['latest_num'] set to {session['latest_num']}")
+
     additional_request = generator.sanitise_input(str(request.form['additional_request']))
     if "additional_request_preset" in request.form:
         if request.form['additional_request_preset']:
@@ -130,14 +161,18 @@ def generate():
         app.logger.debug(f"Generating {num_of_questions} new questions with additional request {additional_request}")
         set_additional_request(additional_request)
     try:
+        app.logger.debug(f"Sending request to gemini...")
         gemini_response = generator.ask_gemini(exam_name=obtain_exam_data()['current_exam']['name'],
                                                 question_num=num_of_questions,
                                                 token=config['API_TOKEN'],
                                                 additional_request=additional_request)
+        app.logger.debug("Recieved response!")
     except google.genai.errors.ClientError:
+        app.logger.debug(f"Token Error. Sending token page")
         return render_template("token_prompt.html.j2")
     global state
     state['question_list'] = gemini_response
+    app.logger.debug(f"Updated state: {concatenate_state_log()}")
     return root()
 
 
@@ -153,7 +188,6 @@ def root():
         session['TOKEN_PRESENT'] = True
     else:
         session['TOKEN_PRESENT'] = False
-    #app.logger.debug(serialized_state)
     return render_template("root.html.j2", data=serialized_state, saved_topics=obtain_saved_topics(), exams=obtain_exam_data())
 
 
@@ -181,6 +215,7 @@ def wipe_questions():
     state['question_list'] = []
     if 'TOKEN_PRESENT' not in session:
         session['TOKEN_PRESENT'] = False
+    app.logger.debug(f"Questions wiped. State: {concatenate_state_log()}")
     return root()
 
 
@@ -218,7 +253,7 @@ def save_the_topic():
             db_manager.add_extra_request(topic_to_save)
             set_additional_request(topic_to_save) # To update session
         except sqlalchemy.exc.IntegrityError:
-            app.logger.info("Topic was NOT saved: Already present.")
+            app.logger.debug(f"Topic {topic_to_save} was NOT saved: Already present.")
             pass
     return redirect("/")
 
@@ -231,7 +266,7 @@ def remove_saved_topic():
         if db_manager.select_extra_req_by_value(topic_to_delete):
             app.logger.debug(f'Attempting to delete saved topic: {topic_to_delete}')
             db_manager.remove_extra_request_by_value(topic_to_delete)
-            app.logger.info(f'Topic was removed: {topic_to_delete}')
+            app.logger.debug(f'Topic was removed: {topic_to_delete}')
             set_additional_request(topic_to_delete) # To update session
     return redirect("/")
 
@@ -245,9 +280,12 @@ def save_question():
         try:
             question.saved = True
             db_manager.add_question(question)
+            app.logger.debug(f"Question {int(request.form['q_index'])} saved successfully.")
             return jsonify({"message": f"Question {int(request.form['q_index'])} saved successfully."})
         except sqlalchemy.exc.IntegrityError:
+            app.logger.debug(f"Question {int(request.form['q_index'])} was already saved.")
             return jsonify({"message": f"Question {int(request.form['q_index'])} was already saved."})
+    app.logger.debug(f"Question index not found in received form.")
         
 
 @app.route('/remove-saved-question/endpoint', methods=['POST'])
@@ -257,10 +295,13 @@ def remove_saved_question():
         id = int(request.form['persistent_id'])
         try:
             db_manager.remove_question_by_id(id)
+            app.logger.debug(f"Remove question with id={id}.")
             return redirect('/saved-questions')
         except:
+            app.logger.debug(f"Could not remove question with id={id}.")
             return redirect('/saved-questions')
     else:
+        app.logger.debug(f"Persistent id not found.")
         return redirect('/saved-questions')
 
 
@@ -273,6 +314,7 @@ def clear_persistent_storage():
     for question in state['question_list']:
         question.saved = False
     db_manager = database_manager.Database()
+    app.logger.debug(f"Database has been cleared and reinitialised.")
     return redirect('/')
 
 
@@ -292,14 +334,12 @@ def set_exam():
     ensure_session()
     if 'exam-id' in request.form:
         new_exam_id = int(request.form['exam-id'])
-        app.logger.debug(f'setting new exam id -> {new_exam_id}')
+        app.logger.debug(f'Switching to another exam with id={new_exam_id}')
         # Saving existing state
         save_state()
         # Switching to a new state if different from current
         if new_exam_id != state['exam_id']:
             switch_state(new_exam_id)
-        
-
     return redirect('/')
 
 
@@ -316,6 +356,10 @@ def add_custom_exam():
         exam_name = generator.sanitise_input(request.form['new-exam-name'])
         if exam_name:
             db_manager.add_new_exam(exam_name=exam_name)
+        else:
+            app.logger.debug(f"Exam name was not provided. Abort adding new exam.")
+    else:
+        app.logger.debug(f"Exam name not found in received form. Abort adding new exam.")
     return redirect('/exam-constructor')
 
 @app.route('/exam-constructor/delete-custom-exam', methods=['POST'])
@@ -323,15 +367,20 @@ def delete_custom_exam():
     ensure_session()
     if "exam-id" in request.form:
         exam_id = int(request.form['exam-id'])
-        db_manager.delete_exam(exam_id=exam_id)
-        if state['exam_id'] == exam_id:
-            switch_state(confguration.Configuration.DefaultValues.DEFAULT_EXAM_ID) # Switch back to default starting exam
+        if exam_id:
+            db_manager.delete_exam(exam_id=exam_id)
+            if state['exam_id'] == exam_id:
+                switch_state(confguration.Configuration.DefaultValues.DEFAULT_EXAM_ID) # Switch back to default starting exam
+        else:
+            app.logger.debug(f"Received exam id is empty. Abort removing exam.")
+    else:
+        app.logger.debug(f"Exam id not present in request form. Abort removing exam.")
     return redirect('/exam-constructor')
 
 @click.group()
 def bluebook():
     '''
-    Blue Book - simple CompTIA Sec+ questions generator. Based on gemini-flash-lite model
+    Blue Book - advanced preparation questions generator for any exam. Based on gemini-flash-lite model
     '''
     pass
 
@@ -360,6 +409,21 @@ def start(debug):
             },
             'loggers': {
                 'bluebook.database_manager': {
+                'level': 'DEBUG',
+                'handlers': ['wsgi'],
+                'propagate': False
+                },
+                'bluebook.generator':{
+                'level': 'DEBUG',
+                'handlers': ['wsgi'],
+                'propagate': False
+                },
+                'bluebook.token_manager': {
+                'level': 'DEBUG',
+                'handlers': ['wsgi'],
+                'propagate': False
+                },
+                'bluebook.data_models': {
                 'level': 'DEBUG',
                 'handlers': ['wsgi'],
                 'propagate': False

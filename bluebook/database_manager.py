@@ -217,7 +217,6 @@ class Database:
 
     
     def save_state(self, state_str: str, exam_id: int, additional_request: str = None):
-        logger.debug(f'Save state received following string -> {state_str}; with exam id={exam_id} and additional request={additional_request}')
         with Session(self.engine) as session:
             state_obj = session.exec(select(States).where(States.exam_id == exam_id)).first()
             if state_obj:
@@ -239,7 +238,6 @@ class Database:
             if loaded_state:
                 out_state_str['state_str'] = loaded_state.state
                 out_state_str['additional_request'] = loaded_state.additional_request
-        logger.debug(f'For exam id {exam_id} loaded state_str {out_state_str}')
         return out_state_str
     
 
@@ -258,7 +256,6 @@ class Database:
             exam_row = session.exec(select(Exams).where(Exams.id == exam_id)).first()
             if exam_row:
                 data_out = {'id': exam_row.id, 'name': exam_row.name}
-        logger.debug(f'Exam selected by id=={exam_id} --> {data_out}')
         return data_out
     
     
