@@ -5,7 +5,7 @@
     {%if data['size']%}
         {% if  session['additional_request']['set']%}
             <div>
-                <p>CompTIA Security+ questions with focus on <b>{{session['additional_request']['value']}}</b></p>
+                <p>{{exams['current_exam']['name']}} questions with focus on <b>{{session['additional_request']['value']}}</b></p>
                 {% if session['additional_request']['set'] and not session['additional_request']['saved']%}
                     <form class="control-button-form" action="{{url_for('save_the_topic')}}" method="POST">
                         <input type="hidden" id="topic" name="topic" value="{{session['additional_request']['value']}}">
@@ -14,7 +14,7 @@
                 {% endif %}
             </div>
         {% else %}
-            <div><p>General CompTIA Security+ questions.</p></div>
+            <div><p>General {{exams['current_exam']['name']}} questions.</p></div>
         {% endif %}
     {% else %}
         <div><p>No questions were generated. This may be due to high server load. Please try again in a few moments.</p></div>

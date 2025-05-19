@@ -63,7 +63,9 @@ def obtain_saved_topics():
 
 def obtain_exam_data():
     current_exam = db_manager.select_exam_by_id(state['exam_id'])
-    return {'exam_list': db_manager.select_all_exams(), 'current_exam': current_exam}
+    exam_data = {'exam_list': db_manager.select_all_exams(), 'current_exam': current_exam}
+    app.logger.debug(f"Exam data obtained: {exam_data}")
+    return exam_data
 
 
 def switch_state(exam_id:int):

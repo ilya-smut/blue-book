@@ -248,7 +248,7 @@ class Database:
         with Session(self.engine) as session:
             exam_row = session.exec(select(Exams).where(Exams.id == exam_id)).first()
             if exam_row:
-                data_out['id'] = exam_row.id,
-                data_out['name'] = exam_row.name
+                data_out = {'id': exam_row.id, 'name': exam_row.name}
+        logger.debug(f'Exam selected by id=={exam_id} --> {data_out}')
         return data_out
         
