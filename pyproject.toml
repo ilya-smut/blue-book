@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "student-bluebook"
 version = "1.0.2"
-description = "Blue Book is an application that uses AI to generate multiple-choice questions to prepare for CompTIA Security+ exam"
+description = "Blue Book generates multiple-choice questions for IT certifications, e.g. CompTIA A+ and Security+"
 authors = ["Ilya Smut <ilya.smut.off.g@gmail.com>"]
 readme = "README.md"
 packages = [{include = "bluebook"}]
