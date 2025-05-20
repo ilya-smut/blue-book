@@ -85,7 +85,10 @@ def obtain_exam_data():
     exam_data =  {'exam_list': db_manager.select_all_exams(),
                   'current_exam': current_exam,
                   'built-in-indices': db_manager.get_built_in_indices()}
-    app.logger.debug(f"Exam data retrieved: {len(exam_data['exam_list'])} exams, current: name='{exam_data['current_exam']['name']}', id={exam_data['current_exam']['id']}")
+    if current_exam:
+        app.logger.debug(f"Exam data retrieved: {len(exam_data['exam_list'])} total exams, current: name='{exam_data['current_exam']['name']}', id={exam_data['current_exam']['id']}")
+    else:
+        app.logger.debug(f"Exam data retrieved: {len(exam_data['exam_list'])} total exams, current exam is not in the database.")
     return exam_data
 
 
@@ -315,7 +318,8 @@ def clear_persistent_storage():
         question.saved = False
     db_manager = database_manager.Database()
     app.logger.debug(f"Database has been cleared and reinitialised.")
-    switch_state(confguration.Configuration.DefaultValues.DEFAULT_EXAM_ID)
+    if state['exam_id'] not in obtain_exam_data()['built-in-indices']:
+        switch_state(confguration.Configuration.DefaultValues.DEFAULT_EXAM_ID)
     return redirect('/')
 
 
