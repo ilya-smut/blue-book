@@ -2,18 +2,41 @@
 # Blue Book
 ![demo-gif](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/bluebook%20gif.gif?raw=true)
 
-Blue Book is an application that generates multiple-choice questions for CompTIA Security+ preparation at the press of a button. It uses the Gemini API to generate questions and provides instant feedback on answers.
+Blue Book is an application that generates multiple-choice questions for IT certifications, e.g.  **CompTIA A+**, **Network+**, and **Security+**. It uses the Gemini API to generate questions and provides instant feedback on answers.
 
 [Project's Homepage](https://student-bluebook.notion.site/)
 
 ## Features
-- Generate CompTIA Security+ multiple-choice questions.
-- Specify the topic you want to the questions to focus on.
-- Save the chosen topic for future use. Access saved topics.
-- Submit answers and receive immediate feedback.
-- Get explanation of correct and incorrect answers to enhance learning.
-- Save questions for revision.
-- App can be run in a docker container with minimal setup.
+
+- Generate multiple-choice questions for any IT certifications, including **CompTIA A+**, **Network+**, and **Security+**. Add more certifications using **Exam Constructor**
+- Easily switch between preset exams or add your own custom certifications.
+- Focus question generation on specific topics or objectives.
+- Save and access custom topics for future use, per certification.
+- Submit answers and receive immediate feedback with detailed explanations.
+- Get personalized study recommendations based on your answers.
+- Save individual questions for later revision.
+- **Persistent state**: all saved questions and topics are retained across sessions.
+- **Isolated storage** per certification ensures organized progress tracking.
+- Run the app in a Docker container with a single command and minimal setup.
+
+
+### Switching between certifications
+![switching-exam](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/switching_exam.gif?raw=true)
+
+Easily switch between built-in certifications.
+
+
+### Add more certifications
+![exam-constructor](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/exam_constructor.gif?raw=true)
+
+Use Exam constructor to add more certifications to the list.
+
+
+### All certs have their own state
+![isolated-exams](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/isolated_exams.gif?raw=true)
+
+All exams have their own space for saved topics and saved questions.
+
 
 ## Installation
 
