@@ -1,0 +1,24 @@
+{% extends "stripped_base.html.j2" %}
+{% block content %}
+<div id="available-exams" style="justify-content: center;display: grid;max-width: 400px;justify-items: center;">
+    <h2>Available exams: </h2>
+    {% for exam in exams['exam_list']%}
+        <div>
+            <p>{% if exam['id'] not in exams['built-in-indices'] %}<i>Custom: </i>{%endif%}{{exam['name']}}</p>
+            {% if exam['id'] not in exams['built-in-indices'] %}
+            <form method="POST">
+                <input type="hidden" name="exam-id" id="exam-id" value="{{exam['id']}}">
+                <button class="subtle-blue-btn" formaction="{{url_for('delete_custom_exam')}}">Delete</button>
+            </form>
+            {% endif %}
+        </div>
+    {% endfor %}
+    <h2>Constructor:</h2>
+    <form name="custom-exam-form" id="custom-exam-form" method="POST" action="{{url_for('add_custom_exam')}}">
+        <label>Name of the exam:
+            <input name="new-exam-name" id="new-exam-name" type="text">
+        </label>
+        <input type="submit" class="subtle-blue-btn" value="Add new exam">
+    </form>
+</div>
+{% endblock content%}

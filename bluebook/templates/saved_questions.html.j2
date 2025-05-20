@@ -2,7 +2,7 @@
 
 {% block content %}
 <div>
-    <p>Saved Questions</p>
+    <p>Saved questions for <em>{{exams['current_exam']['name']}}</em></p>
 </div>
 {% for q_index in range(serialised_questions['size']) %}
     <div class="question-block" id="question-block-no-details-{{q_index}}">

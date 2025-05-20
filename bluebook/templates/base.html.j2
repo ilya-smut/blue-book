@@ -10,8 +10,24 @@
 
 <body>
 <p><a href="{{url_for('root')}}"><img src="{{ url_for('static', filename='images/book.svg') }}" width="100" height="120"></a></p>
-<h1>Blue Book</h1>
-<p>Instantly generate multiple-choice questions to sharpen your CompTIA Security+ skills - just at the press of a button!</p>
+<h1>Student Bluebook: {{exams['current_exam']['name']}}</h1>
+<p>Instantly generate multiple-choice questions to sharpen your <em>{{exams['current_exam']['name']}}</em> skills - just at the press of a button!</p>
+<div id='exam-selector' style="max-width: 300px; display: none;">
+    <form class="control-button-form" action="{{url_for('set_exam')}}" method="POST">
+        <select class="question-dropdown" id="exam-id" name="exam-id">
+            {% for exam in exams['exam_list'] %}
+                {% if exam['id'] == exams['current_exam']['id']%}<option value="{{exam['id']}}">{{ exam['name'] }}</option>{%endif%}
+            {% endfor %}
+            {% for exam in exams['exam_list'] %}
+                {% if exam['id'] != exams['current_exam']['id']%}<option value="{{exam['id']}}">{{ exam['name'] }}</option>{%endif%}
+            {% endfor %}
+        </select>
+        <div class="button-row" style="justify-content: center;margin-top: 10px;">
+            <input type="submit" class="subtle-blue-btn" name="exam-submit-button" id="exam-submit-button" class="exam-submit-button" value="Set exam">
+            <button class="subtle-blue-btn" formmethod="GET" formaction="{{url_for('exam_constructor')}}">Constructor</button>
+        </div>
+    </form>
+</div>
 {% if session['TOKEN_PRESENT'] %}
 {% endif %}
 <div class="control-panel">
@@ -58,11 +74,13 @@
                     <input type="submit" value="Wipe Questions" class="subtle-blue-btn">
                 </form>
             {% endif %}
+                <button id='exam-selector-button' class="subtle-blue-btn" onclick="examSelectorPressed()">Show exams</button>
         </div>
 </div>
 {% block content %}
 {% endblock content %}
 <script>
+
     document.addEventListener('DOMContentLoaded', function () {
         const presetSelect = document.getElementById('additional_request_preset');
         const textboxContainer = document.getElementById('additional_request');
@@ -81,6 +99,7 @@
         // On dropdown change
         presetSelect.addEventListener('change', toggleTextbox);
     });
+
     document.addEventListener('DOMContentLoaded', function (){
         const presetSelect = document.getElementById('additional_request_preset');
         const removeTopicButton = document.getElementById('remove-saved-topic-button');
@@ -99,5 +118,36 @@
         // On dropdown change
         presetSelect.addEventListener('change', toggleRemoveTopicButton);
     });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const switchExamButton = document.getElementById('exam-submit-button');
+        const examSelect = document.getElementById('exam-id');
+
+        function examSelectButtonText() {
+            if (examSelect.value === "{{exams['current_exam']['id']}}") {
+                switchExamButton.value = 'Save state';
+            } else {
+                switchExamButton.value = 'Switch exam';
+            }
+        }
+
+        // Initial check on load
+        examSelectButtonText();
+
+        // On dropdown change
+        examSelect.addEventListener('change', examSelectButtonText);
+    });
+
+    function examSelectorPressed() {
+            const examSelector = document.getElementById('exam-selector');
+            const examSelectorButton = document.getElementById('exam-selector-button');
+            if (examSelector.style.display === 'none') {
+                examSelector.style.display = 'block';
+                examSelectorButton.textContent  = 'Hide exams'
+            } else {
+                examSelector.style.display = 'none';
+                examSelectorButton.textContent  = 'Show exams'
+            }
+        }
 </script>
 </body>

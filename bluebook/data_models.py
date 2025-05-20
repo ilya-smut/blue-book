@@ -1,5 +1,32 @@
 from pydantic import BaseModel
 import bleach
+import logging
+
+logger = logging.getLogger('bluebook.data_models')
+
+class Statistics:
+    def __init__(self):
+        self.all_num = 0
+        self.correct = 0
+    
+    def get_correct_num(self):
+        return self.correct
+    
+    def get_incorrect_num(self):
+        return self.all_num - self.correct
+    
+    def increment_correct(self):
+        self.correct += 1
+
+    def increment_all_num(self):
+        self.all_num += 1
+
+    def increment_both(self):
+        self.increment_all_num()
+        self.increment_correct()
+
+    def serialise(self):
+        return {"all": self.all_num, "correct": self.correct, "incorrect": self.get_incorrect_num()}
 
 class Choice(BaseModel):
     option: str
@@ -61,3 +88,25 @@ def serialize_questions(question_list: list[Question]):
                 })
         serialized['size'] += 1
     return serialized
+
+
+def load_questions(ser_question_list):
+    #logger.debug(f'Loading serialised list of questions: {ser_question_list}')
+    question_list = list[Question]()
+    if not ser_question_list['questions']:
+        return question_list
+
+    for i in range(ser_question_list['size']):
+        choices = list[Choice]()
+        for choice_dict in ser_question_list['questions'][i]['choices']:
+            choices.append(Choice(option=choice_dict['option'],
+                                  is_correct=choice_dict['is_correct'],
+                                  explanation=choice_dict['explanation']))
+            
+        question_list.append(Question(question=ser_question_list['questions'][i]['question'],
+                                      choices=choices,
+                                      study_recommendation=ser_question_list['questions'][i]['study_recommendation'],
+                                      saved=ser_question_list['questions'][i]['saved'],
+                                      persistent_id=ser_question_list['questions'][i]['persistent_id']))
+    
+    return question_list
