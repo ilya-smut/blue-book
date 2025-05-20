@@ -20,22 +20,23 @@ Blue Book is an application that generates multiple-choice questions for IT cert
 - Run the app in a Docker container with a single command and minimal setup.
 
 
-### Switching between certifications
-![switching-exam](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/switching_exam.gif?raw=true)
 
+## Switching between certifications
 Easily switch between built-in certifications.
 
+![switching-exam](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/switching_exam.gif?raw=true)
 
-### Add more certifications
-![exam-constructor](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/exam_constructor.gif?raw=true)
 
+## Add more certifications with Exam Constructor
 Use Exam constructor to add more certifications to the list.
 
+![exam-constructor](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/exam_constructor.gif?raw=true)
 
-### All certs have their own state
-![isolated-exams](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/isolated_exams.gif?raw=true)
 
+## All certs have their own state
 All exams have their own space for saved topics and saved questions.
+
+![isolated-exams](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/isolated_exams.gif?raw=true)
 
 
 ## Installation
