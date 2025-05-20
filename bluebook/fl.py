@@ -315,6 +315,7 @@ def clear_persistent_storage():
         question.saved = False
     db_manager = database_manager.Database()
     app.logger.debug(f"Database has been cleared and reinitialised.")
+    switch_state(confguration.Configuration.DefaultValues.DEFAULT_EXAM_ID)
     return redirect('/')
 
 

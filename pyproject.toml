@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "student-bluebook"
-version = "1.0.0"
+version = "1.0.1"
 description = "Blue Book is an application that uses AI to generate multiple-choice questions to prepare for CompTIA Security+ exam"
 authors = ["Ilya Smut <ilya.smut.off.g@gmail.com>"]
 readme = "README.md"
