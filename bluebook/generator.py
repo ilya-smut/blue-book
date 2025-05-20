@@ -31,7 +31,7 @@ Your goal is to produce exactly {question_num} multiple-choice questions that mi
    - Provide 4 answer options.
    - Indicate the correct option.
    - Give a concise explanation of why the correct answer is right.
-   - Recommend a specific study topic or resource that a student should master to fully understand this question.
+   - Produce a detailed study recommendation that will help student to fully understand this question.
 
 ## Focus
 """
@@ -45,7 +45,7 @@ Your goal is to produce exactly {question_num} multiple-choice questions that mi
 ## Constraints
 - Questions must be non-trivial (medium to high difficulty).
 - Avoid any ambiguous wording; each question must have a single clear correct answer.
-- Do not include any references to “examiner” or “you” in the question text.
+- Do not include any references to “examiner”, "student" or “you” in the question text.
 """
 
     return prompt
