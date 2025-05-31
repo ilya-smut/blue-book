@@ -68,7 +68,7 @@ def ask_gemini(exam_name, question_num, token, additional_request):
         logger.error(f"Client error: {e}")
         return []
     
-    raw_questions: list[data_models._RawQuestion] = response.parsed
+    raw_questions: list[data_models._RawQuestion] = response.parsed # type: ignore
     questions = list[data_models.Question]()
     for raw_question in raw_questions:
         questions.append(data_models.Question.from_raw_question(raw_question))
