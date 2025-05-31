@@ -59,4 +59,4 @@ jobs:
           poetry install
 
       - name: Run ruff
-        run: poetry run ruff --output-format=github bluebook/
+        run: poetry run ruff check bluebook/
