@@ -3,7 +3,7 @@ import os
 # Determine the correct config directory based on OS
 def get_config_directory():
     if os.name == "nt":  # Windows
-        return os.path.join(os.getenv("APPDATA"), "bluebook")
+        return os.path.join(str(os.getenv("APPDATA")), "bluebook")
     else:  # macOS/Linux
         return os.path.join(os.path.expanduser("~"), ".bluebook")
 

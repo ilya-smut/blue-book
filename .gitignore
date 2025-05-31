@@ -4,3 +4,5 @@ config.json
 dist/
 .venv/
 database.db
+.mypy_cache/
+.ruff_cache/

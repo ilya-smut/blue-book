@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from flask import render_template
-from bluebook.confguration import Configuration
+from bluebook.configuration import Configuration
 
 # Initialize the logger
 logger = logging.getLogger("bluebook.token_manager")
@@ -14,7 +14,7 @@ def load_config():
         with open(Configuration.SystemPath.CONFIG_PATH, "r") as f:
             logger.debug(f'Config has been read from {Configuration.SystemPath.CONFIG_PATH}')
             return json.load(f)
-        logger.info(f'Config is empty or not present.')
+        logger.info('Config is empty or not present.')
     return {}
 
 

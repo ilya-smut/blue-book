@@ -1,8 +1,9 @@
 import sqlalchemy.exc
-from sqlmodel import Field, SQLModel, Session, UniqueConstraint, create_engine, select, delete
-from bluebook.confguration import Configuration
+from sqlmodel import Field, SQLModel, Session, UniqueConstraint, create_engine, select, delete, col
+from bluebook.configuration import Configuration
 from bluebook import data_models
 import logging
+from typing import Optional, List
 
 logger = logging.getLogger('bluebook.database_manager')
 
@@ -82,7 +83,7 @@ class Database:
         if type(id) is str:
             try:
                 id = int(id) # Best effort to convert to int
-            except:
+            except (ValueError, TypeError):
                 pass
         with Session(self.engine) as session:
             return session.exec(select(ExtraRequest).where(ExtraRequest.id==id, ExtraRequest.exam_id==self.exam_id)).first()
@@ -101,15 +102,15 @@ class Database:
         if type(id) is str:
             try:
                 id = int(id) # Best effort to convert to int
-            except:
+            except (ValueError, TypeError):
                 pass
         with Session(self.engine) as session:
-            session.exec(delete(ExtraRequest).where(ExtraRequest.id==id, ExtraRequest.exam_id==self.exam_id))
+            session.exec(delete(ExtraRequest).where(col(ExtraRequest.id)==id, col(ExtraRequest.exam_id)==self.exam_id)) # type: ignore
             session.commit()
     
     def remove_extra_request_by_value(self, request):
         with Session(self.engine) as session:
-            session.exec(delete(ExtraRequest).where(ExtraRequest.request==request, ExtraRequest.exam_id==self.exam_id))
+            session.exec(delete(ExtraRequest).where(col(ExtraRequest.request)==request, col(ExtraRequest.exam_id)==self.exam_id)) # type: ignore
             session.commit()
     
 
@@ -127,14 +128,14 @@ class Database:
                             is_correct=choice_row.is_correct,
                             explanation=choice_row.explanation
                         ))
-                    question = data_models.Question(
+                    structured_question = data_models.Question(
                         question=row.question,
                         choices=choices,
                         study_recommendation=row.study_recommendation,
                         saved=True,
                         persistent_id=row.id
                     )
-                    return question
+                    return structured_question
     
 
     def select_question_by_id(self, persistent_id: int,  pydantic=False):
@@ -184,8 +185,8 @@ class Database:
         with Session(self.engine) as session:
             if question:= session.exec(select(Questions).where(Questions.id == question_id, Questions.exam_id == self.exam_id)).first():
                 # Question found
-                session.exec(delete(Choices).where(Choices.question_id == question.id))
-                session.exec(delete(Questions).where(Questions.id == question.id, Questions.exam_id == self.exam_id))
+                session.exec(delete(Choices).where(col(Choices.question_id) == question.id)) # type: ignore
+                session.exec(delete(Questions).where(col(Questions.id) == question.id, col(Questions.exam_id) == self.exam_id)) # type: ignore
                 session.commit()
             else:
                 # Question not found
@@ -216,16 +217,16 @@ class Database:
             return pydantic_questions
 
     
-    def save_state(self, state_str: str, exam_id: int, additional_request: str = None):
+    def save_state(self, state_str: str, exam_id: int, additional_request: Optional[str] = None):
         with Session(self.engine) as session:
             state_obj = session.exec(select(States).where(States.exam_id == exam_id)).first()
             if state_obj:
-                logger.debug(f'Updating existing state record.')
+                logger.debug('Updating existing state record.')
                 state_obj.state = state_str
                 state_obj.additional_request = additional_request
                 session.add(state_obj)
             else:
-                logger.debug(f'Creating new state record.')
+                logger.debug('Creating new state record.')
                 new_state = States(exam_id=exam_id, state=state_str, additional_request=additional_request)
                 session.add(new_state)
             session.commit()
@@ -241,7 +242,7 @@ class Database:
         return out_state_str
     
 
-    def select_all_exams(self) -> list[dict]:
+    def select_all_exams(self) -> List[dict]:
         exams = []
         with Session(self.engine) as session:
             exams_rows = session.exec(select(Exams))
@@ -273,11 +274,11 @@ class Database:
             with Session(self.engine) as session:
                 mapped_question_ids = session.exec(select(Questions.id).where(Questions.exam_id == exam_id)).all()
                 for question_id in mapped_question_ids:
-                    session.exec(delete(Choices).where(Choices.question_id == question_id))
-                    session.exec(delete(Questions).where(Questions.id == question_id))
-                session.exec(delete(ExtraRequest).where(ExtraRequest.exam_id == exam_id))
-                session.exec(delete(States).where(States.exam_id == exam_id))
-                session.exec(delete(Exams).where(Exams.id == exam_id))
+                    session.exec(delete(Choices).where(col(Choices.question_id) == question_id)) # type: ignore
+                    session.exec(delete(Questions).where(col(Questions.id) == question_id)) # type: ignore
+                session.exec(delete(ExtraRequest).where(col(ExtraRequest.exam_id) == exam_id)) # type: ignore
+                session.exec(delete(States).where(col(States.exam_id) == exam_id)) # type: ignore
+                session.exec(delete(Exams).where(col(Exams.id) == exam_id)) # type: ignore
                 session.commit()
 
 

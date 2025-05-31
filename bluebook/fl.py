@@ -1,15 +1,31 @@
 from flask import Flask, render_template, request, session, redirect, jsonify
 from logging.config import dictConfig
-import google.genai.errors
+from typing import Optional, Any, Dict
+import google.genai.errors # type: ignore
 import os
 import random
 import json
 import click
 import sqlalchemy.exc
-from bluebook import generator, token_manager, database_manager, data_models, confguration
+from bluebook import configuration, generator, token_manager, database_manager, data_models
+
+# Compute the directory of the current file
+app_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Set the absolute paths for templates and static folders
+template_dir = os.path.join(app_dir, 'templates')
+static_dir = os.path.join(app_dir, 'static')
 
 
-def concatenate_state_log(state_log: dict = None):
+# Initialize the application and its state
+app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
+state: Dict[str, Any] = {'question_list': list[data_models.Question](),
+                   'exam_id': 0, 'init': True} # Initial exam - always sec+ as for now
+app.secret_key = random.randbytes(32)
+db_manager = database_manager.Database()
+
+
+def concatenate_state_log(state_log: Optional[dict] = None):
     if not state_log:
         global state
         num_of_questions =str(len(state['question_list']))
@@ -33,7 +49,7 @@ def load_state_from_string(str_questions: str):
     try:
         serialised_questions = json.loads(str_questions)
         app.logger.debug("State string deserialised to python object successfully.")
-    except:
+    except json.JSONDecodeError:
         app.logger.debug("Invalid string. Reverting to {'questions': [], 'size': 0}.")
         serialised_questions = {'questions': [], 'size': 0}
     state['question_list'] = data_models.load_questions(serialised_questions)
@@ -58,23 +74,23 @@ def ensure_session():
         switch_state(state['exam_id'])
     if 'submitted' not in session:
         session['submitted'] = False
-        app.logger.debug(f"session['submitted'] initialised to False.")
+        app.logger.debug("session['submitted'] initialised to False.")
     if 'additional_request' not in session:
         set_additional_request(False)
     if 'latest_num' not in session:
         session['latest_num'] = '2'
-        app.logger.debug(f"session['latest_num'] initialised to 2.")
+        app.logger.debug("session['latest_num'] initialised to 2.")
     if 'TOKEN_PRESENT' not in session:
         session['TOKEN_PRESENT'] = False
-        app.logger.debug(f"session['TOKEN_PRESENT'] initialised to False.")
+        app.logger.debug("session['TOKEN_PRESENT'] initialised to False.")
 
 
 def obtain_saved_topics():
-    data = {}
+    data: Dict[str, Any] = {}
     all_saved_topics = db_manager.select_all_extra_requests()
     size = len(all_saved_topics)
     data['size'] = size
-    data['requests'] = []
+    data['requests'] = list()
     for topic in all_saved_topics:
         data['requests'].append(topic.to_dict())
     app.logger.debug(f"Saved topics retrieved for exam_id={state['exam_id']}. Size={data['size']}")
@@ -105,10 +121,10 @@ def switch_state(exam_id:int):
     set_additional_request(loaded_state['additional_request'])
     if state['question_list']:
         session['submitted'] = True
-        app.logger.debug(f"session['submitted'] changed to True.")
+        app.logger.debug("session['submitted'] changed to True.")
     else:
         session['submitted'] = False
-        app.logger.debug(f"session['submitted'] changed to False.")
+        app.logger.debug("session['submitted'] changed to False.")
     app.logger.debug(f"New state: {concatenate_state_log()}")
     
 
@@ -121,21 +137,6 @@ def save_state():
     db_manager.save_state(state_str=current_state_str, exam_id=current_exam_id, additional_request=session['additional_request']['value'])
 
 
-# Compute the directory of the current file
-app_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Set the absolute paths for templates and static folders
-template_dir = os.path.join(app_dir, 'templates')
-static_dir = os.path.join(app_dir, 'static')
-
-
-# Initialize the application and its state
-app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
-state = {'question_list': list[data_models.Question](),
-                   'exam_id': 0, 'init': True} # Initial exam - always sec+ as for now
-app.secret_key = random.randbytes(32)
-db_manager = database_manager.Database()
-
 
 @app.route("/generate", methods=['POST'])
 def generate():
@@ -143,11 +144,11 @@ def generate():
     ensure_session()
 
     if token_page:= token_manager.ensure_token(config):
-        app.logger.debug(f"Token not found. Sending token page.")
+        app.logger.debug("Token not found. Sending token page.")
         return token_page
     
     session['submitted'] = True
-    app.logger.debug(f"session['submitted'] set to True")
+    app.logger.debug("session['submitted'] set to True")
 
     num_of_questions = int(request.form['num_of_questions'])
     session['latest_num'] = str(num_of_questions)
@@ -164,14 +165,14 @@ def generate():
         app.logger.debug(f"Generating {num_of_questions} new questions with additional request {additional_request}")
         set_additional_request(additional_request)
     try:
-        app.logger.debug(f"Sending request to gemini...")
+        app.logger.debug("Sending request to gemini...")
         gemini_response = generator.ask_gemini(exam_name=obtain_exam_data()['current_exam']['name'],
                                                 question_num=num_of_questions,
                                                 token=config['API_TOKEN'],
                                                 additional_request=additional_request)
         app.logger.debug("Recieved response!")
     except google.genai.errors.ClientError:
-        app.logger.debug(f"Token Error. Sending token page")
+        app.logger.debug("Token Error. Sending token page")
         return render_template("token_prompt.html.j2")
     global state
     state['question_list'] = gemini_response
@@ -288,7 +289,7 @@ def save_question():
         except sqlalchemy.exc.IntegrityError:
             app.logger.debug(f"Question {int(request.form['q_index'])} was already saved.")
             return jsonify({"message": f"Question {int(request.form['q_index'])} was already saved."})
-    app.logger.debug(f"Question index not found in received form.")
+    app.logger.debug("Question index not found in received form.")
         
 
 @app.route('/remove-saved-question/endpoint', methods=['POST'])
@@ -300,11 +301,15 @@ def remove_saved_question():
             db_manager.remove_question_by_id(id)
             app.logger.debug(f"Remove question with id={id}.")
             return redirect('/saved-questions')
-        except:
+        except sqlalchemy.exc.SQLAlchemyError as e:
+            app.logger.error(f"Database operation failed: {e}")
+            app.logger.debug(f"Could not remove question with id={id}.")
+        except Exception as e:
+            app.logger.error(f"Unexpected error in remove_question_by_id: {e}")
             app.logger.debug(f"Could not remove question with id={id}.")
             return redirect('/saved-questions')
     else:
-        app.logger.debug(f"Persistent id not found.")
+        app.logger.debug("Persistent id not found.")
         return redirect('/saved-questions')
 
 
@@ -313,13 +318,13 @@ def clear_persistent_storage():
     ensure_session()
     global state
     global db_manager
-    confguration.Configuration.SystemPath.clear_persistent()
+    configuration.Configuration.SystemPath.clear_persistent()
     for question in state['question_list']:
         question.saved = False
     db_manager = database_manager.Database()
-    app.logger.debug(f"Database has been cleared and reinitialised.")
+    app.logger.debug("Database has been cleared and reinitialised.")
     if state['exam_id'] not in obtain_exam_data()['built-in-indices']:
-        switch_state(confguration.Configuration.DefaultValues.DEFAULT_EXAM_ID)
+        switch_state(configuration.Configuration.DefaultValues.DEFAULT_EXAM_ID)
     return redirect('/')
 
 
@@ -362,9 +367,9 @@ def add_custom_exam():
         if exam_name:
             db_manager.add_new_exam(exam_name=exam_name)
         else:
-            app.logger.debug(f"Exam name was not provided. Abort adding new exam.")
+            app.logger.debug("Exam name was not provided. Abort adding new exam.")
     else:
-        app.logger.debug(f"Exam name not found in received form. Abort adding new exam.")
+        app.logger.debug("Exam name not found in received form. Abort adding new exam.")
     return redirect('/exam-constructor')
 
 @app.route('/exam-constructor/delete-custom-exam', methods=['POST'])
@@ -375,11 +380,11 @@ def delete_custom_exam():
         if exam_id:
             db_manager.delete_exam(exam_id=exam_id)
             if state['exam_id'] == exam_id:
-                switch_state(confguration.Configuration.DefaultValues.DEFAULT_EXAM_ID) # Switch back to default starting exam
+                switch_state(configuration.Configuration.DefaultValues.DEFAULT_EXAM_ID) # Switch back to default starting exam
         else:
-            app.logger.debug(f"Received exam id is empty. Abort removing exam.")
+            app.logger.debug("Received exam id is empty. Abort removing exam.")
     else:
-        app.logger.debug(f"Exam id not present in request form. Abort removing exam.")
+        app.logger.debug("Exam id not present in request form. Abort removing exam.")
     return redirect('/exam-constructor')
 
 @click.group()
@@ -435,7 +440,7 @@ def start(debug):
                 }
             }
         })
-        app.run("0.0.0.0", "5000", True, True)
+        app.run(host="0.0.0.0", port=5000, debug=True, load_dotenv=True)
     else:
         dictConfig({
             'version': 1,
@@ -453,7 +458,7 @@ def start(debug):
                 'handlers': ['wsgi']
             }
         })
-        app.run("0.0.0.0", "5000", False, True)
+        app.run(host="0.0.0.0", port=5000, debug=True, load_dotenv=True)
 
 
 if __name__ == "__main__":

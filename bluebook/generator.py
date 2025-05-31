@@ -1,4 +1,4 @@
-from google import genai
+from google import genai # type: ignore
 import logging
 import bleach
 import re

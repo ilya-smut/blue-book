@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 import bleach
 import logging
+from typing import Dict, Any
 
 logger = logging.getLogger('bluebook.data_models')
 
@@ -69,7 +70,7 @@ class Question(BaseModel):
 
 
 def serialize_questions(question_list: list[Question]):
-    serialized = {"questions": [], "size":0}
+    serialized: Dict[str, Any] = {"questions": [], "size":0}
     for question in question_list:
         serialized['questions'].append(
             {
