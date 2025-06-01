@@ -3,10 +3,10 @@ from pathlib import Path
 
 
 # Determine the correct config directory based on OS
-def get_config_directory() -> str:
+def get_config_directory() -> Path:
     """Returns the path to the configuration directory based on the operating system."""
     if os.name == "nt":  # Windows
-        return Path(os.getenv("APPDATA")) / "bluebook"
+        return Path(os.getenv("APPDATA")) / "bluebook" # type: ignore
     # macOS/Linux
     return Path.home() / ".config" / "bluebook"
 

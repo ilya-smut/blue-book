@@ -1,6 +1,6 @@
 import contextlib
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import sqlalchemy.exc
 from sqlmodel import (
@@ -81,7 +81,7 @@ class Database:
         # Default starting exam is CompTIA Security+ (exam_id=0)
         # Setup the database
         self.exam_id = exam_id
-        self.built_in_indices = set()
+        self.built_in_indices = set[int]()
         self.engine = create_engine(f"sqlite:///{Configuration.SystemPath.DATABASE_PATH}")
         SQLModel.metadata.create_all(self.engine)
 
@@ -95,9 +95,9 @@ class Database:
                 try:
                     session.add(exam)
                     session.commit()
-                    self.built_in_indices.add(exam.id)
+                    self.built_in_indices.add(exam.id) # type: ignore
                 except sqlalchemy.exc.IntegrityError:
-                    self.built_in_indices.add(exam.id)
+                    self.built_in_indices.add(exam.id) # type: ignore
                     # It is already there - all good.
 
     # List of built-in exams. Will be used to avoid deleting built-in exams.
@@ -114,9 +114,9 @@ class Database:
             list[ExtraRequest]: A list of all extra requests for the current exam.
         """
         with Session(self.engine) as session:
-            return session.exec(
+            return list(session.exec(
                 select(ExtraRequest).where(ExtraRequest.exam_id == self.exam_id),
-            ).all()
+            ).all())
 
     def select_extra_req_by_id(self, id: int | str) -> Optional[ExtraRequest]: # noqa: A002
         """Selects an extra request by its ID for the current exam.
@@ -149,7 +149,7 @@ class Database:
                 ),
             ).first()
 
-    def add_extra_request(self, request: int) -> None:
+    def add_extra_request(self, request: str) -> None:
         """Adds a new extra request for the current exam.
         Args:
             request (str): The extra request to add.
@@ -309,14 +309,15 @@ class Database:
             )
             session.add(question_to_insert)
             session.commit()
-            assinged_id = self.select_question_by_value(question.question).id
+            if obtained_question:= self.select_question_by_value(question.question, pydantic=False):
+                assinged_id = obtained_question.id # type: ignore
             choices_to_map = list[Choices]()
             for choice in question.choices:
                 choice_to_insert = Choices(
                     option=choice.option,
                     explanation=choice.explanation,
                     is_correct=choice.is_correct,
-                    question_id=assinged_id,
+                    question_id=assinged_id, # type: ignore
                 )
                 choices_to_map.append(choice_to_insert)
             session.add_all(choices_to_map)
@@ -409,7 +410,7 @@ class Database:
                 session.add(new_state)
             session.commit()
 
-    def load_state(self, exam_id: int) -> dict[str, str | int | None]:
+    def load_state(self, exam_id: int) -> dict[str, Any]:
         """ Loads the state of the exam from the database.
         If the state does not exist, it returns an empty state string
         and None for additional_request.
@@ -424,7 +425,7 @@ class Database:
                 out_state_str["additional_request"] = loaded_state.additional_request
         return out_state_str
 
-    def select_all_exams(self) -> list[dict]:
+    def select_all_exams(self) -> list[dict[str, Any]]:
         """Selects all exams from the database and returns them as a list of dictionaries.
         Returns:
             list[dict]: A list of dictionaries, each containing the ID and name of an exam.
@@ -435,7 +436,7 @@ class Database:
             return exams
         return []
 
-    def select_exam_by_id(self, exam_id: int) -> dict[str, int | str]:
+    def select_exam_by_id(self, exam_id: int) -> dict[str, Any]:
         """Selects an exam by its ID and returns it as a dictionary.
         Returns a dictionary in the format:
             {

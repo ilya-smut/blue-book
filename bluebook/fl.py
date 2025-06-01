@@ -8,6 +8,8 @@ import click
 import google.genai.errors  # type: ignore
 import sqlalchemy.exc
 from flask import Flask, jsonify, redirect, render_template, request, session
+from flask.wrappers import Response as FlaskResponse
+from werkzeug.wrappers.response import Response
 
 from bluebook import configuration, data_models, database_manager, generator, token_manager
 
@@ -30,13 +32,9 @@ app.secret_key = secrets.randbits(256).to_bytes(32, "big")  # Generate a random 
 db_manager = database_manager.Database()
 
 
-def concatenate_state_log(state_log: Optional[dict] = None) -> str:
+def concatenate_state_log(state_log: Optional[dict[str, Any]] = None) -> str:
     """ Concatenates the state log into a readable string format.
     If state_log is None, uses the global state variable.
-    Args:
-        state_log (Optional[dict]): Optional state log to use instead of the global state.
-    Returns:
-        str: A string representation of the state log.
     """
     if not state_log:
         global state
@@ -60,10 +58,8 @@ def state_to_json_string() -> str:
     return str_questions
 
 
-def load_state_from_string(str_questions: str) -> None:
+def load_state_from_string(str_questions: Any) -> None:
     """Loads the state from a JSON string.
-    Args:
-        str_questions (str): A JSON string representation of the questions.
     """
     global state
     app.logger.debug("Loading string into state", extra={"length": len(str_questions)})
@@ -76,7 +72,7 @@ def load_state_from_string(str_questions: str) -> None:
     state["question_list"] = data_models.load_questions(serialised_questions)
 
 
-def set_additional_request(value: str | bool) -> None:
+def set_additional_request(value: Any) -> None:
     """Sets the additional request in the session.
     Args:
         value (str or bool): The additional request value. If False, clears the request.
@@ -353,11 +349,11 @@ def check() -> str:
     global state
     original_data = state["question_list"]
     statistics = data_models.Statistics()
-    data_out = {
+    data_out: dict[str, dict[Any, Any]] = {
         "original_data": data_models.serialize_questions(original_data),
-        "user_answers": {},
-        "is_answer_correct": {},
-        "statistics": {},
+        "user_answers": dict[int, int](),
+        "is_answer_correct": dict[int, bool](),
+        "statistics": dict[str, dict[str, int]](),
     }
     for i in range(len(original_data)):
         if original_data[i].choices[int(user_answers[str(i)])].is_correct:
@@ -381,7 +377,7 @@ def check() -> str:
 
 
 @app.route("/save-the-topic", methods=["POST"])
-def save_the_topic() -> str:
+def save_the_topic() -> Response:
     """Saves the additional request topic provided by the user.
     This function checks if the topic is present in the form data,
     attempts to save it to the database,
@@ -403,7 +399,7 @@ def save_the_topic() -> str:
 
 
 @app.route("/remove-saved-topic", methods=["POST"])
-def remove_saved_topic() -> str:
+def remove_saved_topic() -> Response:
     """Removes a saved topic from the database.
     This function checks if the 'additional_request_preset' is present in the form data,
     retrieves the topic to delete, checks if it exists in the database,
@@ -423,7 +419,7 @@ def remove_saved_topic() -> str:
 
 
 @app.route("/save-question", methods=["POST"])
-def save_question() -> str:
+def save_question() -> Response | tuple[FlaskResponse, int]:
     """Saves a question to the database.
     This function checks if the 'q_index' is present in the form data,
     retrieves the corresponding question from the state, and attempts to save it to the database.
@@ -459,7 +455,7 @@ def save_question() -> str:
 
 
 @app.route("/remove-saved-question/endpoint", methods=["POST"])
-def remove_saved_question() -> str:
+def remove_saved_question() -> Response:
     """Removes a saved question from the database.
     This function checks if the 'persistent_id' is present in the form data,
     retrieves the question ID, and attempts to remove it from the database.
@@ -491,13 +487,12 @@ def remove_saved_question() -> str:
                 "persistent_id": id,
                 "exam_id": state["exam_id"]})
             return redirect("/saved-questions")
-    else:
-        app.logger.debug("Persistent id not found.")
-        return redirect("/saved-questions")
+    app.logger.debug("Persistent id not found.")
+    return redirect("/saved-questions")
 
 
 @app.route("/clear-persistent-storage", methods=["POST"])
-def clear_persistent_storage() -> str:
+def clear_persistent_storage() -> Response:
     """Clears the persistent storage and reinitialises the database.
     This function ensures that the session is initialized,
     clears the persistent storage,
@@ -541,7 +536,7 @@ def saved_questions() -> str:
 
 
 @app.route("/set-exam", methods=["POST"])
-def set_exam() -> str:
+def set_exam() -> Response:
     """Switches to another exam based on the exam ID provided in the form data.
     This function ensures that the session is initialized,
     retrieves the new exam ID from the form data,
@@ -577,7 +572,7 @@ def exam_constructor() -> str:
 
 
 @app.route("/exam-constructor/add-custom-exam", methods=["POST"])
-def add_custom_exam() -> str:
+def add_custom_exam() -> Response:
     """Adds a new custom exam based on the name provided in the form data.
     This function ensures that the session is initialized,
     retrieves the exam name from the form data,
@@ -599,7 +594,7 @@ def add_custom_exam() -> str:
 
 
 @app.route("/exam-constructor/delete-custom-exam", methods=["POST"])
-def delete_custom_exam() -> str:
+def delete_custom_exam() -> Response:
     """Deletes a custom exam based on the exam ID provided in the form data.
     This function ensures that the session is initialized,
     retrieves the exam ID from the form data,

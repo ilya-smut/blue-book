@@ -1,5 +1,6 @@
 import logging
 import re
+from typing import Optional
 
 import bleach
 from google import genai  # type: ignore
@@ -71,7 +72,7 @@ Questions must mirror the style, rigor, and coverage of the actual {exam_name} e
 
 def ask_gemini(exam_name: str,
                question_num: int,
-               token: str,
+               token: Optional[str],
                additional_request: str) -> list[data_models.Question]:
     """Query the Gemini API to generate multiple-choice questions.
     Args:

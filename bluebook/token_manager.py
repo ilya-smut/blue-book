@@ -1,6 +1,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import Optional
 
 from flask import render_template
 
@@ -11,7 +12,7 @@ logger = logging.getLogger("bluebook.token_manager")
 
 
 # Function to load configuration
-def load_config() -> dict[str, str]:
+def load_config() -> dict[str, Optional[str]]:
     """
     Loads the configuration from the config file.
     Returns:
@@ -27,7 +28,7 @@ def load_config() -> dict[str, str]:
 
 
 # Function to save configuration
-def save_config(config: dict[str, str]) -> None:
+def save_config(config: dict[str, Optional[str]]) -> None:
     """
     Saves the configuration to the config file.
     Args:
@@ -41,7 +42,7 @@ def save_config(config: dict[str, str]) -> None:
                 extra={"config_path": Configuration.SystemPath.CONFIG_PATH})
 
 
-def is_token_present(config: dict[str, str]) -> bool:
+def is_token_present(config: dict[str, Optional[str]]) -> bool:
     """
     Checks if the API token is present in the configuration.
     Args:
@@ -63,7 +64,7 @@ def is_token_present(config: dict[str, str]) -> bool:
 
 
 # Function to ensure the API token is present
-def ensure_token(config: dict[str, str]) -> str | None:
+def ensure_token(config: dict[str, Optional[str]]) -> str | None:
     """
     Ensures that the API token is present in the configuration.
     If not, it returns a prompt to the user to set the token.
