@@ -1,33 +1,32 @@
 import json
-import os
-import random
+import secrets
 from logging.config import dictConfig
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Optional
 
 import click
+import google.genai.errors  # type: ignore
 import sqlalchemy.exc
 from flask import Flask, jsonify, redirect, render_template, request, session
-
-import google.genai.errors  # type: ignore
 
 from bluebook import configuration, data_models, database_manager, generator, token_manager
 
 # Compute the directory of the current file
-app_dir = os.path.dirname(os.path.abspath(__file__))
+app_dir = Path(__file__).resolve().parent
 
 # Set the absolute paths for templates and static folders
-template_dir = os.path.join(app_dir, "templates")
-static_dir = os.path.join(app_dir, "static")
+template_dir = Path(app_dir) / "templates"
+static_dir = Path(app_dir) / "static"
 
 
 # Initialize the application and its state
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
-state: Dict[str, Any] = {
+state: dict[str, Any] = {
     "question_list": list[data_models.Question](),
     "exam_id": 0,
     "init": True,
 }  # Initial exam - always sec+ as for now
-app.secret_key = random.randbytes(32)
+app.secret_key = secrets.randbits(256).to_bytes(32, "big")  # Generate a random secret key
 db_manager = database_manager.Database()
 
 
@@ -42,13 +41,14 @@ def concatenate_state_log(state_log: Optional[dict] = None) -> str:
     if not state_log:
         global state
         num_of_questions = str(len(state["question_list"]))
-        return f"State[ {num_of_questions} questions, exam_id={state['exam_id']}, is_init={state['init']}]"
-    else:
-        num_of_questions = str(len(state_log["question_list"]))
-        return f"State[ {num_of_questions} questions, exam_id={state_log['exam_id']}, is_init={state_log['init']}]"
+        return (f"State[ {num_of_questions} questions, "
+                "exam_id={state['exam_id']}, is_init={state['init']}]")
+    num_of_questions = str(len(state_log["question_list"]))
+    return (f"State[ {num_of_questions} questions, "
+            "exam_id={state_log['exam_id']}, is_init={state_log['init']}]")
 
 
-def state_to_json_string():
+def state_to_json_string() -> str:
     """Serializes the current state to a JSON string.
     Returns:
         str: A JSON string representation of the current state.
@@ -56,7 +56,7 @@ def state_to_json_string():
     global state
     questions = data_models.serialize_questions(state["question_list"])
     str_questions = json.dumps(questions)
-    app.logger.debug(f"State [{concatenate_state_log()}] dumped to a json string.")
+    app.logger.debug("State dumped to a json string.", extra={"state": concatenate_state_log()})
     return str_questions
 
 
@@ -66,7 +66,7 @@ def load_state_from_string(str_questions: str) -> None:
         str_questions (str): A JSON string representation of the questions.
     """
     global state
-    app.logger.debug(f"Loading string into state; string length={len(str_questions)}.")
+    app.logger.debug("Loading string into state", extra={"length": len(str_questions)})
     try:
         serialised_questions = json.loads(str_questions)
         app.logger.debug("State string deserialised to python object successfully.")
@@ -86,7 +86,7 @@ def set_additional_request(value: str | bool) -> None:
         app.logger.debug("Additional request cleared.")
     else:
         saved_request = db_manager.select_extra_req_by_value(value)
-        app.logger.debug(f"Additional request set to {value}")
+        app.logger.debug("Additional request set", extra={"value": value})
         if saved_request:
             session["additional_request"] = {"set": True, "value": value, "saved": True}
         else:
@@ -119,8 +119,8 @@ def ensure_session() -> None:
 
 
 def obtain_saved_topics() -> dict[str, Any]:
-    """Retrieves all saved topics from the database. returns a dictionary with the size and list of saved topics.
-        in the format:
+    """Retrieves all saved topics from the database.
+    Returns a dictionary with the size and list of saved topics in the format:
 
         {
             "size": int,
@@ -131,15 +131,16 @@ def obtain_saved_topics() -> dict[str, Any]:
     all_saved_topics = db_manager.select_all_extra_requests()
     size = len(all_saved_topics)
     data["size"] = size
-    data["requests"] = list()
+    data["requests"] = []
     for topic in all_saved_topics:
         data["requests"].append(topic.to_dict())
-    app.logger.debug(f"Saved topics retrieved for exam_id={state['exam_id']}. Size={data['size']}")
+    app.logger.debug("Saved topics retrieved", extra={"size": size, "exam_id": state["exam_id"]})
     return data
 
 
 def obtain_exam_data() -> dict[str, Any]:
-    """Retrieves the current exam data and all exams from the database. Returns a dictionary with the following structure:
+    """Retrieves the current exam data and all exams from the database.
+    Returns a dictionary with the following structure:
 
     {
         "exam_list": List[{"id": int, "name": str}...],
@@ -153,14 +154,10 @@ def obtain_exam_data() -> dict[str, Any]:
         "current_exam": current_exam,
         "built-in-indices": db_manager.get_built_in_indices(),
     }
-    if current_exam:
-        app.logger.debug(
-            f"Exam data retrieved: {len(exam_data['exam_list'])} total exams, current: name='{exam_data['current_exam']['name']}', id={exam_data['current_exam']['id']}"
-        )
-    else:
-        app.logger.debug(
-            f"Exam data retrieved: {len(exam_data['exam_list'])} total exams, current exam is not in the database."
-        )
+    app.logger.debug("Exam data retrieved", extra={
+        "current_exam": exam_data["current_exam"],
+        "size": len(exam_data["exam_list"]),
+    })
     return exam_data
 
 
@@ -169,8 +166,7 @@ def switch_state(exam_id: int) -> None:
     Args:
         exam_id (int): The ID of the exam to switch to.
     """
-    app.logger.debug(f"Switching state to exam_id={exam_id}")
-    app.logger.debug(f"Initial state: {concatenate_state_log()}")
+    app.logger.debug("Switching state", extra={"exam_id": exam_id})
     # Setting new state
     global state
     global db_manager
@@ -185,7 +181,11 @@ def switch_state(exam_id: int) -> None:
     else:
         session["submitted"] = False
         app.logger.debug("session['submitted'] changed to False.")
-    app.logger.debug(f"New state: {concatenate_state_log()}")
+    app.logger.debug("State switched", extra={
+        "exam_id": state["exam_id"],
+        "question_list_size": len(state["question_list"]),
+        "additional_request": session["additional_request"]["value"],
+    })
 
 
 def save_state() -> None:
@@ -194,7 +194,11 @@ def save_state() -> None:
     """
     current_exam_id = state["exam_id"]
     current_state_str = state_to_json_string()
-    app.logger.debug(f"Saving state: {concatenate_state_log()}")
+    app.logger.debug("Saving state to database", extra={
+        "exam_id": current_exam_id,
+        "state_str_length": len(current_state_str),
+        "additional_request": session["additional_request"]["value"],
+    })
     db_manager.save_state(
         state_str=current_state_str,
         exam_id=current_exam_id,
@@ -205,7 +209,8 @@ def save_state() -> None:
 @app.route("/generate", methods=["POST"])
 def generate() -> str:
     """Generates new questions based on the user's input.
-    This function handles the form submission from the root page, retrieves the number of questions,
+    This function handles the form submission from the root page,
+    retrieves the number of questions,
     additional request, and generates questions using the Gemini API.
     If the token is not present, it redirects to the token prompt page.
     """
@@ -221,21 +226,20 @@ def generate() -> str:
 
     num_of_questions = int(request.form["num_of_questions"])
     session["latest_num"] = str(num_of_questions)
-    app.logger.debug(f"session['latest_num'] set to {session['latest_num']}")
+    app.logger.debug("session['latest_num'] chaged", extra={"latest_num": session["latest_num"]})
 
     additional_request = generator.sanitise_input(str(request.form["additional_request"]))
-    if "additional_request_preset" in request.form:
-        if request.form["additional_request_preset"]:
+    if request.form.get("additional_request_preset"):
             additional_request = generator.sanitise_input(
-                str(request.form["additional_request_preset"])
+                str(request.form["additional_request_preset"]),
             )
+    app.logger.debug("Generating new questions", extra={
+        "num_of_questions": num_of_questions,
+        "additional_request": additional_request,
+    })
     if not additional_request:
-        app.logger.debug(f"Generating {num_of_questions} new questions")
         set_additional_request(False)
     else:
-        app.logger.debug(
-            f"Generating {num_of_questions} new questions with additional request {additional_request}"
-        )
         set_additional_request(additional_request)
     try:
         app.logger.debug("Sending request to gemini...")
@@ -251,16 +255,22 @@ def generate() -> str:
         return render_template("token_prompt.html.j2")
     global state
     state["question_list"] = gemini_response
-    app.logger.debug(f"Updated state: {concatenate_state_log()}")
+    app.logger.debug("Updated state", extra={
+        "exam_id": state["exam_id"],
+        "question_list_size": len(state["question_list"]),
+        "additional_request": session["additional_request"]["value"],
+    })
     return root()
 
 
 @app.route("/")
 def root() -> str:
     """Renders the root page of the application.
-    It initializes the session, loads the configuration, and prepares the data for rendering.
+    It initializes the session, loads the configuration,
+    and prepares the data for rendering.
     If the token is present, it sets the session variable accordingly.
-    The function also serializes the current state of questions and prepares the saved topics and exam data.
+    The function also serializes the current state of questions
+    and prepares the saved topics and exam data.
     """
     config = token_manager.load_config()
     ensure_session()
@@ -306,8 +316,10 @@ def clear_token() -> str:
 @app.route("/wipe_questions", methods=["POST"])
 def wipe_questions() -> str:
     """Wipes the current questions from the session and state.
-    This function resets the session variables related to questions, sets the additional request to False,
-    updates the latest number of questions, and clears the question list in the state.
+    This function resets the session variables related to questions,
+    sets the additional request to False,
+    updates the latest number of questions,
+    and clears the question list in the state.
     It also checks if the token is present in the session and logs the action.
     Finally, it redirects to the root page.
     """
@@ -318,21 +330,26 @@ def wipe_questions() -> str:
     state["question_list"] = []
     if "TOKEN_PRESENT" not in session:
         session["TOKEN_PRESENT"] = False
-    app.logger.debug(f"Questions wiped. State: {concatenate_state_log()}")
+    app.logger.debug("Questions wiped", extra={
+        "exam_id": state["exam_id"],
+        "question_list_size": len(state["question_list"]),
+        "additional_request": session["additional_request"]["value"],
+    })
     return root()
 
 
 @app.route("/check", methods=["POST"])
 def check() -> str:
     """Checks the user's answers against the generated questions.
-    This function retrieves the user's answers from the form data, compares them with the correct answers,
+    This function retrieves the user's answers from the form data,
+    compares them with the correct answers,
     and prepares the data for rendering the results page.
     It also updates the statistics based on the user's answers and serializes the original data.
     Finally, it renders the 'check.html.j2' template with the prepared data.
     """
     ensure_session()
     user_answers = {key: request.form[key] for key in request.form}
-    app.logger.debug(user_answers)
+    app.logger.debug("Obtained user answers", extra={"num_of_answers": len(user_answers)})
     global state
     original_data = state["question_list"]
     statistics = data_models.Statistics()
@@ -344,27 +361,32 @@ def check() -> str:
     }
     for i in range(len(original_data)):
         if original_data[i].choices[int(user_answers[str(i)])].is_correct:
-            app.logger.debug(f"Question {i} Correct!")
             data_out["user_answers"][i] = int(user_answers[str(i)])
             data_out["is_answer_correct"][i] = True
             statistics.increment_both()
         else:
-            app.logger.debug(f"Question {i} Incorrect!")
             data_out["user_answers"][i] = int(user_answers[str(i)])
             data_out["is_answer_correct"][i] = False
             statistics.increment_all_num()
     data_out["statistics"] = statistics.serialise()
-    app.logger.debug(data_out)
+    app.logger.debug("User answers checked", extra={
+        "statistics": data_out["statistics"],
+        })
     return render_template(
-        "check.html.j2", data=data_out, saved_topics=obtain_saved_topics(), exams=obtain_exam_data()
+        "check.html.j2",
+        data=data_out,
+        saved_topics=obtain_saved_topics(),
+        exams=obtain_exam_data(),
     )
 
 
 @app.route("/save-the-topic", methods=["POST"])
 def save_the_topic() -> str:
     """Saves the additional request topic provided by the user.
-    This function checks if the topic is present in the form data, attempts to save it to the database,
-    and updates the session with the saved topic. If the topic is already present in the database,
+    This function checks if the topic is present in the form data,
+    attempts to save it to the database,
+    and updates the session with the saved topic.
+    If the topic is already present in the database,
     it logs a debug message and does not save it again.
     Finally, it redirects to the root page.
     """
@@ -375,8 +397,8 @@ def save_the_topic() -> str:
             db_manager.add_extra_request(topic_to_save)
             set_additional_request(topic_to_save)  # To update session
         except sqlalchemy.exc.IntegrityError:
-            app.logger.debug(f"Topic {topic_to_save} was NOT saved: Already present.")
-            pass
+            app.logger.debug("Topic was NOT saved: Already present.",
+                             extra={"topic": topic_to_save})
     return redirect("/")
 
 
@@ -393,9 +415,9 @@ def remove_saved_topic() -> str:
     if "additional_request_preset" in request.form:
         topic_to_delete = request.form["additional_request_preset"]
         if db_manager.select_extra_req_by_value(topic_to_delete):
-            app.logger.debug(f"Attempting to delete saved topic: {topic_to_delete}")
+            app.logger.debug("Attempting to delete saved topic", extra={"topic": topic_to_delete})
             db_manager.remove_extra_request_by_value(topic_to_delete)
-            app.logger.debug(f"Topic was removed: {topic_to_delete}")
+            app.logger.debug("Topic was removed", extra={"topic": topic_to_delete})
             set_additional_request(topic_to_delete)  # To update session
     return redirect("/")
 
@@ -405,7 +427,8 @@ def save_question() -> str:
     """Saves a question to the database.
     This function checks if the 'q_index' is present in the form data,
     retrieves the corresponding question from the state, and attempts to save it to the database.
-    If the question is already saved, it logs a debug message and returns a message indicating that.
+    If the question is already saved,
+    it logs a debug message and returns a message indicating that.
     If the question is saved successfully, it returns a success message.
     If the 'q_index' is not found in the form data, it logs a debug message.
     """
@@ -416,16 +439,23 @@ def save_question() -> str:
         try:
             question.saved = True
             db_manager.add_question(question)
-            app.logger.debug(f"Question {int(request.form['q_index'])} saved successfully.")
+            app.logger.debug("Question saved successfully.", extra={
+                "question_index": int(request.form["q_index"]),
+                "exam_id": state["exam_id"],
+            })
             return jsonify(
-                {"message": f"Question {int(request.form['q_index'])} saved successfully."}
+                {"message": f"Question {int(request.form['q_index'])} saved successfully."},
             )
         except sqlalchemy.exc.IntegrityError:
-            app.logger.debug(f"Question {int(request.form['q_index'])} was already saved.")
+            app.logger.debug("Question was already saved.", extra={
+                "question_index": int(request.form["q_index"]),
+                "exam_id": state["exam_id"],
+            })
             return jsonify(
-                {"message": f"Question {int(request.form['q_index'])} was already saved."}
+                {"message": f"Question {int(request.form['q_index'])} was already saved."},
             )
     app.logger.debug("Question index not found in received form.")
+    return jsonify({"message": "Question index not found in received form."}), 400
 
 
 @app.route("/remove-saved-question/endpoint", methods=["POST"])
@@ -433,23 +463,33 @@ def remove_saved_question() -> str:
     """Removes a saved question from the database.
     This function checks if the 'persistent_id' is present in the form data,
     retrieves the question ID, and attempts to remove it from the database.
-    If the question is successfully removed, it logs a debug message and redirects to the saved questions page.
-    If there is a database error or an unexpected error, it logs the error and redirects to the saved questions page.
-    If the 'persistent_id' is not found in the form data, it logs a debug message and redirects to the saved questions page.
+    If the question is successfully removed,
+    it logs a debug message and redirects to the saved questions page.
+    If there is a database error or an unexpected error,
+    it logs the error and redirects to the saved questions page.
+    If the 'persistent_id' is not found in the form data,
+    it logs a debug message and redirects to the saved questions page.
     """
     ensure_session()
     if "persistent_id" in request.form:
-        id = int(request.form["persistent_id"])
+        id = int(request.form["persistent_id"]) # noqa: A001
         try:
             db_manager.remove_question_by_id(id)
-            app.logger.debug(f"Remove question with id={id}.")
+            app.logger.debug("Remove question", extra={
+                "persistent_id": id,
+                "exam_id": state["exam_id"],
+            })
             return redirect("/saved-questions")
         except sqlalchemy.exc.SQLAlchemyError as e:
-            app.logger.error(f"Database operation failed: {e}")
-            app.logger.debug(f"Could not remove question with id={id}.")
+            app.logger.error("Database operation failed", exc_info=e)
+            app.logger.debug("Could not remove question", extra={
+                "persistent_id": id,
+                "exam_id": state["exam_id"]})
         except Exception as e:
-            app.logger.error(f"Unexpected error in remove_question_by_id: {e}")
-            app.logger.debug(f"Could not remove question with id={id}.")
+            app.logger.error("Unexpected error in remove_question_by_id", exc_info=e)
+            app.logger.debug("Could not remove question", extra={
+                "persistent_id": id,
+                "exam_id": state["exam_id"]})
             return redirect("/saved-questions")
     else:
         app.logger.debug("Persistent id not found.")
@@ -459,9 +499,12 @@ def remove_saved_question() -> str:
 @app.route("/clear-persistent-storage", methods=["POST"])
 def clear_persistent_storage() -> str:
     """Clears the persistent storage and reinitialises the database.
-    This function ensures that the session is initialized, clears the persistent storage,
-    resets the saved status of all questions in the state, reinitialises the database manager,
-    and switches the state to the default exam ID if the current exam ID is not in the built-in indices.
+    This function ensures that the session is initialized,
+    clears the persistent storage,
+    resets the saved status of all questions in the state,
+    reinitialises the database manager,
+    and switches the state to the default exam ID
+    if the current exam ID is not in the built-in indices.
     Finally, it redirects to the root page.
     """
     ensure_session()
@@ -480,8 +523,10 @@ def clear_persistent_storage() -> str:
 @app.route("/saved-questions", methods=["GET"])
 def saved_questions() -> str:
     """Renders the saved questions page.
-    This function ensures that the session is initialized, retrieves all saved questions from the database,
-    serializes the questions, and prepares the data for rendering the 'saved_questions.html.j2' template.
+    This function ensures that the session is initialized,
+    retrieves all saved questions from the database,
+    serializes the questions,
+    and prepares the data for rendering the 'saved_questions.html.j2' template.
     It also obtains the saved topics and exam data to be displayed on the page.
     """
     ensure_session()
@@ -498,14 +543,19 @@ def saved_questions() -> str:
 @app.route("/set-exam", methods=["POST"])
 def set_exam() -> str:
     """Switches to another exam based on the exam ID provided in the form data.
-    This function ensures that the session is initialized, retrieves the new exam ID from the form data,
-    saves the current state, and switches to the new exam state if the new exam ID is different from the current one.
+    This function ensures that the session is initialized,
+    retrieves the new exam ID from the form data,
+    saves the current state,
+    and switches to the new exam state if the new exam ID is different from the current one.
     Finally, it redirects to the root page.
     """
     ensure_session()
     if "exam-id" in request.form:
         new_exam_id = int(request.form["exam-id"])
-        app.logger.debug(f"Switching to another exam with id={new_exam_id}")
+        app.logger.debug("Switching to another exam", extra={
+            "new_exam_id": new_exam_id,
+            "current_exam_id": state["exam_id"],
+        })
         # Saving existing state
         save_state()
         # Switching to a new state if different from current
@@ -519,7 +569,7 @@ def exam_constructor() -> str:
     """Renders the exam constructor page.
     This function ensures that the session is initialized, prepares custom data for rendering,
     and retrieves the exam data from the database.
-    It returns the rendered 'exam_constructor.html.j2' template with the custom data and exam data.
+    It returns the rendered 'exam_constructor.html.j2' template with the custom and exam data.
     """
     ensure_session()
     custom = {"header": "Exam Constructor"}
@@ -529,9 +579,11 @@ def exam_constructor() -> str:
 @app.route("/exam-constructor/add-custom-exam", methods=["POST"])
 def add_custom_exam() -> str:
     """Adds a new custom exam based on the name provided in the form data.
-    This function ensures that the session is initialized, retrieves the exam name from the form data,
+    This function ensures that the session is initialized,
+    retrieves the exam name from the form data,
     sanitizes the input, and adds the new exam to the database if the exam name is valid.
-    If the exam name is not provided or is empty, it logs a debug message and does not add the exam.
+    If the exam name is not provided or is empty,
+    it logs a debug message and does not add the exam.
     Finally, it redirects to the exam constructor page.
     """
     ensure_session()
@@ -549,10 +601,13 @@ def add_custom_exam() -> str:
 @app.route("/exam-constructor/delete-custom-exam", methods=["POST"])
 def delete_custom_exam() -> str:
     """Deletes a custom exam based on the exam ID provided in the form data.
-    This function ensures that the session is initialized, retrieves the exam ID from the form data,
+    This function ensures that the session is initialized,
+    retrieves the exam ID from the form data,
     and attempts to delete the exam from the database if the exam ID is valid.
-    If the exam ID is not provided or is empty, it logs a debug message and does not delete the exam.
-    If the exam is successfully deleted and it was the current exam, it switches back to the default starting exam.
+    If the exam ID is not provided or is empty, it logs a debug message
+    and does not delete the exam.
+    If the exam is successfully deleted and it was the current exam,
+    it switches back to the default starting exam.
     Finally, it redirects to the exam constructor page.
     """
     ensure_session()
@@ -562,7 +617,7 @@ def delete_custom_exam() -> str:
             db_manager.delete_exam(exam_id=exam_id)
             if state["exam_id"] == exam_id:
                 switch_state(
-                    configuration.Configuration.DefaultValues.DEFAULT_EXAM_ID
+                    configuration.Configuration.DefaultValues.DEFAULT_EXAM_ID,
                 )  # Switch back to default starting exam
         else:
             app.logger.debug("Received exam id is empty. Abort removing exam.")
@@ -574,17 +629,17 @@ def delete_custom_exam() -> str:
 @click.group()
 def bluebook() -> None:
     """
-    Blue Book - advanced preparation questions generator for any exam. Based on gemini-flash-lite model
+    Blue Book - advanced preparation questions generator for any exam.
+    Based on gemini-flash-lite model.
     This is a command line interface for the Blue Book application.
     """
-    pass
 
 
 @bluebook.command()
 @click.option(
-    "--debug", is_flag=True, show_default=True, default=False, help="Run flask app in debug mode"
+    "--debug", is_flag=True, show_default=True, default=False, help="Run flask app in debug mode",
 )
-def start(debug) -> None:
+def start(debug: bool) -> None:
     """
     Start web server for Blue Book application.
     """
@@ -596,14 +651,14 @@ def start(debug) -> None:
                 "formatters": {
                     "default": {
                         "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-                    }
+                    },
                 },
                 "handlers": {
                     "wsgi": {
                         "class": "logging.StreamHandler",
                         "stream": "ext://flask.logging.wsgi_errors_stream",
                         "formatter": "default",
-                    }
+                    },
                 },
                 "root": {"level": "INFO", "handlers": ["wsgi"]},
                 "loggers": {
@@ -628,9 +683,9 @@ def start(debug) -> None:
                         "propagate": False,
                     },
                 },
-            }
+            },
         )
-        app.run(host="0.0.0.0", port=5000, debug=True, load_dotenv=True)
+        app.run(host="0.0.0.0", port=5000, debug=True, load_dotenv=True) # noqa: S104, S201
     else:
         dictConfig(
             {
@@ -639,19 +694,19 @@ def start(debug) -> None:
                 "formatters": {
                     "default": {
                         "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-                    }
+                    },
                 },
                 "handlers": {
                     "wsgi": {
                         "class": "logging.StreamHandler",
                         "stream": "ext://flask.logging.wsgi_errors_stream",
                         "formatter": "default",
-                    }
+                    },
                 },
                 "root": {"level": "INFO", "handlers": ["wsgi"]},
-            }
+            },
         )
-        app.run(host="0.0.0.0", port=5000, debug=False, load_dotenv=True)
+        app.run(host="0.0.0.0", port=5000, debug=False, load_dotenv=True) # noqa: S104
 
 
 # run the application if this file is executed directly

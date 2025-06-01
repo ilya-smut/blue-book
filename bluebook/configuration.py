@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+
 # Determine the correct config directory based on OS
 def get_config_directory() -> str:
     """Returns the path to the configuration directory based on the operating system."""
@@ -22,8 +23,8 @@ class Configuration:
         @classmethod
         def clear_persistent(cls) -> None:
             """Clears the persistent database file."""
-            if os.path.exists(cls.DATABASE_PATH):
-                os.remove(cls.DATABASE_PATH)
+            if Path.exists(cls.DATABASE_PATH):
+                Path.unlink(cls.DATABASE_PATH)
 
     class DefaultValues:
         DEFAULT_EXAM_ID = 0     # CompTIA Security+ as a default exam

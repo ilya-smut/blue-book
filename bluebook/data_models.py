@@ -105,7 +105,7 @@ def serialize_questions(question_list: list[Question]) -> dict[str, Any]:
                 "study_recommendation": question.study_recommendation,
                 "saved": question.saved,
                 "persistent_id": question.persistent_id,
-            }
+            },
         )
         for choice in question.choices:
             serialized["questions"][-1]["choices"].append(
@@ -113,16 +113,17 @@ def serialize_questions(question_list: list[Question]) -> dict[str, Any]:
                     "option": choice.option,
                     "is_correct": choice.is_correct,
                     "explanation": choice.explanation,
-                }
+                },
             )
         serialized["size"] += 1
     return serialized
 
 
-def load_questions(ser_question_list) -> list[Question]:
+def load_questions(ser_question_list: dict[str, Any]) -> list[Question]:
     """Loads a list of Question objects from a serialized dictionary format.
     Args:
-        ser_question_list (dict): Serialized question list containing questions and their attributes.
+        ser_question_list (dict): Serialized question list containing questions
+        and their attributes.
     Returns:
         list[Question]: A list of Question objects.
     """
@@ -138,7 +139,7 @@ def load_questions(ser_question_list) -> list[Question]:
                     option=choice_dict["option"],
                     is_correct=choice_dict["is_correct"],
                     explanation=choice_dict["explanation"],
-                )
+                ),
             )
 
         question_list.append(
@@ -148,7 +149,7 @@ def load_questions(ser_question_list) -> list[Question]:
                 study_recommendation=ser_question_list["questions"][i]["study_recommendation"],
                 saved=ser_question_list["questions"][i]["saved"],
                 persistent_id=ser_question_list["questions"][i]["persistent_id"],
-            )
+            ),
         )
 
     return question_list

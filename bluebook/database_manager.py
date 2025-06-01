@@ -5,13 +5,13 @@ from typing import Optional
 import sqlalchemy.exc
 from sqlmodel import (
     Field,
-    SQLModel,
     Session,
+    SQLModel,
     UniqueConstraint,
-    create_engine,
-    select,
-    delete,
     col,
+    create_engine,
+    delete,
+    select,
 )
 
 from bluebook import data_models
@@ -71,11 +71,12 @@ class States(SQLModel, table=True):
 
 
 class Database:
-    def __init__(self, exam_id=Configuration.DefaultValues.DEFAULT_EXAM_ID) -> None:
+    def __init__(self, exam_id: int = Configuration.DefaultValues.DEFAULT_EXAM_ID) -> None:
         """
         Initializes the Database instance.
         Args:
-            exam_id (int): The ID of the exam to work with. Defaults to CompTIA Security+ (exam_id=0).
+            exam_id (int): The ID of the exam to work with.
+            Defaults to CompTIA Security+ (exam_id=0).
         """
         # Default starting exam is CompTIA Security+ (exam_id=0)
         # Setup the database
@@ -114,10 +115,10 @@ class Database:
         """
         with Session(self.engine) as session:
             return session.exec(
-                select(ExtraRequest).where(ExtraRequest.exam_id == self.exam_id)
+                select(ExtraRequest).where(ExtraRequest.exam_id == self.exam_id),
             ).all()
 
-    def select_extra_req_by_id(self, id: int | str) -> Optional[ExtraRequest]:
+    def select_extra_req_by_id(self, id: int | str) -> Optional[ExtraRequest]: # noqa: A002
         """Selects an extra request by its ID for the current exam.
         Args:
             id (int | str): The ID of the extra request to search for.
@@ -126,12 +127,13 @@ class Database:
         """
         if type(id) is str:
             with contextlib.suppress(ValueError, TypeError):
-                id = int(id)  # Best effort to convert to int
+                # Best effort to convert to int
+                id = int(id)  # noqa: A001
         with Session(self.engine) as session:
             return session.exec(
                 select(ExtraRequest).where(
-                    ExtraRequest.id == id, ExtraRequest.exam_id == self.exam_id
-                )
+                    ExtraRequest.id == id, ExtraRequest.exam_id == self.exam_id,
+                ),
             ).first()
 
     def select_extra_req_by_value(self, request: str) -> Optional[ExtraRequest]:
@@ -143,8 +145,8 @@ class Database:
         with Session(self.engine) as session:
             return session.exec(
                 select(ExtraRequest).where(
-                    ExtraRequest.request == request, ExtraRequest.exam_id == self.exam_id
-                )
+                    ExtraRequest.request == request, ExtraRequest.exam_id == self.exam_id,
+                ),
             ).first()
 
     def add_extra_request(self, request: int) -> None:
@@ -161,7 +163,7 @@ class Database:
             session.add(extra_request)
             session.commit()
 
-    def remove_extra_request_by_id(self, request_id) -> None:
+    def remove_extra_request_by_id(self, request_id: int | str) -> None:
         """Removes an extra request by its ID for the current exam.
         Args:
             request_id (int | str): The ID of the extra request to remove.
@@ -174,12 +176,12 @@ class Database:
         with Session(self.engine) as session:
             session.exec(
                 delete(ExtraRequest).where(
-                    col(ExtraRequest.id) == id, col(ExtraRequest.exam_id) == self.exam_id
-                )
+                    col(ExtraRequest.id) == id, col(ExtraRequest.exam_id) == self.exam_id,
+                ),
             )  # type: ignore
             session.commit()
 
-    def remove_extra_request_by_value(self, request) -> None:
+    def remove_extra_request_by_value(self, request: str) -> None:
         """Removes an extra request by its value for the current exam.
         Args:
             request (str): The value of the extra request to remove.
@@ -189,16 +191,21 @@ class Database:
         with Session(self.engine) as session:
             session.exec(
                 delete(ExtraRequest).where(
-                    col(ExtraRequest.request) == request, col(ExtraRequest.exam_id) == self.exam_id
-                )
+                    col(ExtraRequest.request) == request,
+                    col(ExtraRequest.exam_id) == self.exam_id,
+                ),
             )  # type: ignore
             session.commit()
 
-    def select_question_by_value(self, question: str, pydantic=False) -> Optional[data_models.Question | Questions]:
+    def select_question_by_value(self,
+                                 question: str,
+                                 pydantic: bool = False,
+                                 ) -> Optional[data_models.Question | Questions]:
         """Selects a question by its value for the current exam.
         Args:
             question (str): The question text to search for.
-            pydantic (bool): If True, returns a Pydantic model, otherwise returns a SQLModel instance.
+            pydantic (bool): If True, returns a Pydantic model,
+            otherwise returns a SQLModel instance.
         Returns:
             Optional[data_models.Question | Questions]: The question if found, otherwise None.
         """
@@ -206,17 +213,17 @@ class Database:
             if not pydantic:
                 return session.exec(
                     select(Questions).where(
-                        Questions.question == question, Questions.exam_id == self.exam_id
-                    )
+                        Questions.question == question, Questions.exam_id == self.exam_id,
+                    ),
                 ).first()
 
             if row := session.exec(
                 select(Questions).where(
-                    Questions.question == question, Questions.exam_id == self.exam_id
-                )
+                    Questions.question == question, Questions.exam_id == self.exam_id,
+                ),
             ).first():
                 choices_rows = session.exec(
-                    select(Choices).where(Choices.question_id == row.id)
+                    select(Choices).where(Choices.question_id == row.id),
                 )
                 choices = list[data_models.Choice]()
                 for choice_row in choices_rows:
@@ -225,7 +232,7 @@ class Database:
                             option=choice_row.option,
                             is_correct=choice_row.is_correct,
                             explanation=choice_row.explanation,
-                        )
+                        ),
                     )
                 structured_question = data_models.Question(
                     question=row.question,
@@ -235,28 +242,33 @@ class Database:
                     persistent_id=row.id,
                 )
                 return structured_question
+        return None
 
-    def select_question_by_id(self, persistent_id: int, pydantic=False) -> Optional[data_models.Question | Questions]:
+    def select_question_by_id(self,
+                              persistent_id: int,
+                              pydantic: bool = False,
+                              ) -> Optional[data_models.Question | Questions]:
         """Selects a question by its persistent ID for the current exam.
     Args:
             persistent_id (int): The persistent ID of the question to search for.
-            pydantic (bool): If True, returns a Pydantic model, otherwise returns a SQLModel instance.
+            pydantic (bool): If True, returns a Pydantic model,
+            otherwise returns a SQLModel instance.
         """
         with Session(self.engine) as session:
             if not pydantic:
                 return session.exec(
                     select(Questions).where(
-                        Questions.id == persistent_id, Questions.exam_id == self.exam_id
-                    )
+                        Questions.id == persistent_id, Questions.exam_id == self.exam_id,
+                    ),
                 ).first()
 
             if row := session.exec(
                 select(Questions).where(
-                    Questions.id == persistent_id, Questions.exam_id == self.exam_id
-                )
+                    Questions.id == persistent_id, Questions.exam_id == self.exam_id,
+                ),
             ).first():
                 choices_rows = session.exec(
-                    select(Choices).where(Choices.question_id == row.id)
+                    select(Choices).where(Choices.question_id == row.id),
                 )
                 choices = list[data_models.Choice]()
                 for choice_row in choices_rows:
@@ -265,7 +277,7 @@ class Database:
                             option=choice_row.option,
                             is_correct=choice_row.is_correct,
                             explanation=choice_row.explanation,
-                        )
+                        ),
                     )
                 question = data_models.Question(
                     question=row.question,
@@ -275,6 +287,7 @@ class Database:
                     persistent_id=row.id,
                 )
                 return question
+        return None
 
     def add_question(self, question: data_models.Question) -> None:
         """
@@ -319,15 +332,15 @@ class Database:
         with Session(self.engine) as session:
             if question := session.exec(
                 select(Questions).where(
-                    Questions.id == question_id, Questions.exam_id == self.exam_id
-                )
+                    Questions.id == question_id, Questions.exam_id == self.exam_id,
+                ),
             ).first():
                 # Question found
                 session.exec(delete(Choices).where(col(Choices.question_id) == question.id))  # type: ignore
                 session.exec(
                     delete(Questions).where(
-                        col(Questions.id) == question.id, col(Questions.exam_id) == self.exam_id
-                    )
+                        col(Questions.id) == question.id, col(Questions.exam_id) == self.exam_id,
+                    ),
                 )  # type: ignore
                 session.commit()
             else:
@@ -337,14 +350,15 @@ class Database:
     def select_all_questions_pydantic(self) -> list[data_models.Question]:
         """Selects all questions for the current exam and returns them as Pydantic models.
         Returns:
-            list[data_models.Question]: A list of all questions for the current exam as Pydantic models.
+            list[data_models.Question]: A list of all questions for the current exam
+            as Pydantic models.
         """
         with Session(self.engine) as session:
             pydantic_questions = list[data_models.Question]()
             all_rows = session.exec(select(Questions).where(Questions.exam_id == self.exam_id))
             for question_row in all_rows:
                 choices_rows = session.exec(
-                    select(Choices).where(Choices.question_id == question_row.id)
+                    select(Choices).where(Choices.question_id == question_row.id),
                 )
                 choices = list[data_models.Choice]()
                 for choice_row in choices_rows:
@@ -353,7 +367,7 @@ class Database:
                             option=choice_row.option,
                             is_correct=choice_row.is_correct,
                             explanation=choice_row.explanation,
-                        )
+                        ),
                     )
                 question = data_models.Question(
                     question=question_row.question,
@@ -365,7 +379,10 @@ class Database:
                 pydantic_questions.append(question)
             return pydantic_questions
 
-    def save_state(self, state_str: str, exam_id: int, additional_request: Optional[str] = None) -> None:
+    def save_state(self,
+                    state_str: str,
+                    exam_id: int,
+                    additional_request: Optional[str] = None) -> None:
         """
         Saves the state of the exam to the database.
         If a state record for the given exam_id already exists, it updates the record.
@@ -375,7 +392,7 @@ class Database:
             exam_id (int): The ID of the exam for which to save the state.
             additional_request (Optional[str]): An optional additional request string.
         Returns:
-            None 
+            None
         """
         with Session(self.engine) as session:
             state_obj = session.exec(select(States).where(States.exam_id == exam_id)).first()
@@ -387,18 +404,17 @@ class Database:
             else:
                 logger.debug("Creating new state record.")
                 new_state = States(
-                    exam_id=exam_id, state=state_str, additional_request=additional_request
+                    exam_id=exam_id, state=state_str, additional_request=additional_request,
                 )
                 session.add(new_state)
             session.commit()
 
     def load_state(self, exam_id: int) -> dict[str, str | int | None]:
-        """ Loads the state of the exam from the database. 
-        If the state does not exist, it returns an empty state string and None for additional_request.
+        """ Loads the state of the exam from the database.
+        If the state does not exist, it returns an empty state string
+        and None for additional_request.
         Args:
             exam_id (int): The ID of the exam for which to load the state.
-        Returns:
-            dict[str, str | int | None]: A dictionary containing the state string and additional request.
         """
         out_state_str = {"state_str": "", "exam_id": exam_id, "additional_request": None}
         with Session(self.engine) as session:
@@ -413,15 +429,14 @@ class Database:
         Returns:
             list[dict]: A list of dictionaries, each containing the ID and name of an exam.
         """
-        exams = []
         with Session(self.engine) as session:
             exams_rows = session.exec(select(Exams))
-            for row in exams_rows:
-                exams.append({"id": row.id, "name": row.name})
-        return exams
+            exams = [{"id": row.id, "name": row.name} for row in exams_rows]
+            return exams
+        return []
 
     def select_exam_by_id(self, exam_id: int) -> dict[str, int | str]:
-        """Selects an exam by its ID and returns it as a dictionary. 
+        """Selects an exam by its ID and returns it as a dictionary.
         Returns a dictionary in the format:
             {
                 "id": int,
@@ -448,14 +463,13 @@ class Database:
             None
         """
         exam = Exams(name=exam_name)
-        with Session(self.engine) as session:
-            with contextlib.suppress(sqlalchemy.exc.IntegrityError):
-                session.add(exam)
-                session.commit()
-                # if exception occurs, it means the exam already exists
+        with Session(self.engine) as session, contextlib.suppress(sqlalchemy.exc.IntegrityError):
+            session.add(exam)
+            session.commit()
+            # if exception occurs, it means the exam already exists
 
     def delete_exam(self, exam_id: int) -> None:
-        """ 
+        """
         Deletes an exam by its ID from the database.
         This method will also delete all associated questions, choices, extra requests, and states.
         Args:
@@ -466,7 +480,7 @@ class Database:
         if exam_id not in self.built_in_indices:
             with Session(self.engine) as session:
                 mapped_question_ids = session.exec(
-                    select(Questions.id).where(Questions.exam_id == exam_id)
+                    select(Questions.id).where(Questions.exam_id == exam_id),
                 ).all()
                 for question_id in mapped_question_ids:
                     session.exec(delete(Choices).where(col(Choices.question_id) == question_id))  # type: ignore

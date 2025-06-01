@@ -1,7 +1,9 @@
-import os
 import json
 import logging
+from pathlib import Path
+
 from flask import render_template
+
 from bluebook.configuration import Configuration
 
 # Initialize the logger
@@ -9,44 +11,80 @@ logger = logging.getLogger("bluebook.token_manager")
 
 
 # Function to load configuration
-def load_config():
-    if os.path.exists(Configuration.SystemPath.CONFIG_PATH):
-        with open(Configuration.SystemPath.CONFIG_PATH, "r") as f:
-            logger.debug(f"Config has been read from {Configuration.SystemPath.CONFIG_PATH}")
+def load_config() -> dict[str, str]:
+    """
+    Loads the configuration from the config file.
+    Returns:
+        dict: The configuration dictionary loaded from the file.
+    """
+    if Path.exists(Configuration.SystemPath.CONFIG_PATH):
+        with Path.open(Configuration.SystemPath.CONFIG_PATH) as f:
+            logger.debug("Loading config from file",
+                         extra={"config_path": Configuration.SystemPath.CONFIG_PATH})
             return json.load(f)
         logger.info("Config is empty or not present.")
     return {}
 
 
 # Function to save configuration
-def save_config(config):
-    with open(Configuration.SystemPath.CONFIG_PATH, "w") as f:
+def save_config(config: dict[str, str]) -> None:
+    """
+    Saves the configuration to the config file.
+    Args:
+        config (dict): The configuration dictionary to save.
+    """
+    logger.debug("Saving config to file",
+                 extra={"config_path": Configuration.SystemPath.CONFIG_PATH})
+    with Path.open(Configuration.SystemPath.CONFIG_PATH, "w") as f:
         json.dump(config, f, indent=4)
-    logger.info(f"Config has been saved into {Configuration.SystemPath.CONFIG_PATH}")
+    logger.info("Config has been saved",
+                extra={"config_path": Configuration.SystemPath.CONFIG_PATH})
 
 
-def is_token_present(config):
+def is_token_present(config: dict[str, str]) -> bool:
+    """
+    Checks if the API token is present in the configuration.
+    Args:
+        config (dict): The configuration dictionary.
+    Returns:
+        bool: True if the API token is present and not empty, False otherwise.
+    """
     if "API_TOKEN" not in config:
-        logger.debug(f"API TOKEN has not been found in {Configuration.SystemPath.CONFIG_PATH}")
+        logger.debug("API token not found in config",
+                     extra={"config_path": Configuration.SystemPath.CONFIG_PATH})
         return False
-    elif config["API_TOKEN"] == "":
-        logger.debug(f"API TOKEN is empty in {Configuration.SystemPath.CONFIG_PATH}")
+    if config["API_TOKEN"] == "":
+        logger.debug("API token not set",
+                     extra={"config_path": Configuration.SystemPath.CONFIG_PATH})
         return False
-    else:
-        logger.debug(f"API TOKEN found in {Configuration.SystemPath.CONFIG_PATH}")
-        return True
+    logger.debug("API token is present",
+                 extra={"config_path": Configuration.SystemPath.CONFIG_PATH})
+    return True
 
 
 # Function to ensure the API token is present
-def ensure_token(config):
+def ensure_token(config: dict[str, str]) -> str | None:
+    """
+    Ensures that the API token is present in the configuration.
+    If not, it returns a prompt to the user to set the token.
+    Args:
+        config (dict): The configuration dictionary.
+    """
     if not is_token_present(config):
         return render_template("token_prompt.html.j2")
     return None
 
 
 # Function to clear the API token
-def clear_token():
-    if os.path.exists(Configuration.SystemPath.CONFIG_PATH):
-        with open(Configuration.SystemPath.CONFIG_PATH, "w") as f:
+def clear_token() -> None:
+    """
+    Clears the API token from the configuration file.
+    This function sets the API token to an empty string in the configuration file.
+    """
+    logger.debug("Clearing API token",
+                 extra={"config_path": Configuration.SystemPath.CONFIG_PATH})
+    if Path.exists(Configuration.SystemPath.CONFIG_PATH):
+        with Path.open(Configuration.SystemPath.CONFIG_PATH, "w") as f:
             json.dump({"API_TOKEN": ""}, f, indent=4)
-    logger.info(f"API TOKEN has been cleared in {Configuration.SystemPath.CONFIG_PATH}")
+    logger.debug("API token has been cleared",
+                 extra={"config_path": Configuration.SystemPath.CONFIG_PATH})
