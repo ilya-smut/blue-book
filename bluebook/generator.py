@@ -1,4 +1,4 @@
-from google import genai # type: ignore
+from google import genai  # type: ignore
 import logging
 import bleach
 import re
@@ -6,13 +6,14 @@ from bluebook import data_models
 
 logger = logging.getLogger("bluebook.generator")
 
+
 def sanitise_input(input: str):
-    sanitized = ''
+    sanitized = ""
     if len(input) > 90:
-        sanitized = re.sub('[^0-9a-zA-Z ]+-', '', input[:90])
+        sanitized = re.sub("[^0-9a-zA-Z ]+-", "", input[:90])
         sanitized = bleach.clean(sanitized)
     else:
-        sanitized = re.sub('[^0-9a-zA-Z ]+-', '', input)
+        sanitized = re.sub("[^0-9a-zA-Z ]+-", "", input)
         sanitized = bleach.clean(sanitized)
     return sanitized
 
@@ -52,23 +53,25 @@ Your goal is to produce exactly {question_num} multiple-choice questions that mi
 
 
 def ask_gemini(exam_name, question_num, token, additional_request):
-    query = gen_default_query(exam_name=exam_name, question_num=question_num, additional_request=additional_request)
+    query = gen_default_query(
+        exam_name=exam_name, question_num=question_num, additional_request=additional_request
+    )
     client = genai.Client(api_key=token)
     try:
         response = client.models.generate_content(
             model="gemini-2.0-flash-lite-preview-02-05",
             contents=query,
             config={
-                'response_mime_type': 'application/json',
-                'response_schema': list[data_models._RawQuestion],
+                "response_mime_type": "application/json",
+                "response_schema": list[data_models._RawQuestion],
             },
         )
     # if server error, return empty list
     except genai.errors.ServerError as e:
         logger.error(f"Client error: {e}")
         return []
-    
-    raw_questions: list[data_models._RawQuestion] = response.parsed # type: ignore
+
+    raw_questions: list[data_models._RawQuestion] = response.parsed  # type: ignore
     questions = list[data_models.Question]()
     for raw_question in raw_questions:
         questions.append(data_models.Question.from_raw_question(raw_question))

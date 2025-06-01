@@ -12,9 +12,9 @@ logger = logging.getLogger("bluebook.token_manager")
 def load_config():
     if os.path.exists(Configuration.SystemPath.CONFIG_PATH):
         with open(Configuration.SystemPath.CONFIG_PATH, "r") as f:
-            logger.debug(f'Config has been read from {Configuration.SystemPath.CONFIG_PATH}')
+            logger.debug(f"Config has been read from {Configuration.SystemPath.CONFIG_PATH}")
             return json.load(f)
-        logger.info('Config is empty or not present.')
+        logger.info("Config is empty or not present.")
     return {}
 
 
@@ -22,18 +22,18 @@ def load_config():
 def save_config(config):
     with open(Configuration.SystemPath.CONFIG_PATH, "w") as f:
         json.dump(config, f, indent=4)
-    logger.info(f'Config has been saved into {Configuration.SystemPath.CONFIG_PATH}')
+    logger.info(f"Config has been saved into {Configuration.SystemPath.CONFIG_PATH}")
 
 
 def is_token_present(config):
     if "API_TOKEN" not in config:
-        logger.debug(f'API TOKEN has not been found in {Configuration.SystemPath.CONFIG_PATH}')
+        logger.debug(f"API TOKEN has not been found in {Configuration.SystemPath.CONFIG_PATH}")
         return False
     elif config["API_TOKEN"] == "":
-        logger.debug(f'API TOKEN is empty in {Configuration.SystemPath.CONFIG_PATH}')
+        logger.debug(f"API TOKEN is empty in {Configuration.SystemPath.CONFIG_PATH}")
         return False
     else:
-        logger.debug(f'API TOKEN found in {Configuration.SystemPath.CONFIG_PATH}')
+        logger.debug(f"API TOKEN found in {Configuration.SystemPath.CONFIG_PATH}")
         return True
 
 
@@ -49,4 +49,4 @@ def clear_token():
     if os.path.exists(Configuration.SystemPath.CONFIG_PATH):
         with open(Configuration.SystemPath.CONFIG_PATH, "w") as f:
             json.dump({"API_TOKEN": ""}, f, indent=4)
-    logger.info(f'API TOKEN has been cleared in {Configuration.SystemPath.CONFIG_PATH}')
+    logger.info(f"API TOKEN has been cleared in {Configuration.SystemPath.CONFIG_PATH}")
