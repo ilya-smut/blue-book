@@ -74,6 +74,9 @@
                     <input type="submit" value="Wipe Questions" class="subtle-blue-btn">
                 </form>
             {% endif %}
+                <form class="open-file-manager" action="{{url_for('file_manager_page')}}" method="GET">
+                    <input type="submit" value="File Manager" class="subtle-blue-btn">
+                </form>
                 <button id='exam-selector-button' class="subtle-blue-btn" onclick="examSelectorPressed()">Show exams</button>
         </div>
 </div>

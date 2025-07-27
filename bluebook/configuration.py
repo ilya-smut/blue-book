@@ -13,12 +13,16 @@ def get_config_directory() -> Path:
 # Ensuring config directory exists
 Path(get_config_directory()).mkdir(parents=True, exist_ok=True)
 
+# Ensure media directory exists
+Path(Path(get_config_directory()) / "saved_media").mkdir(parents=True, exist_ok=True)
+
 class Configuration:
 
     class SystemPath:
         CONFIG_DIR = get_config_directory()
         CONFIG_PATH = Path(CONFIG_DIR) / "config.json"
         DATABASE_PATH = Path(CONFIG_DIR) / "storage.db"
+        MEDIA_PATH = Path(CONFIG_DIR) / "saved_media"
 
         @classmethod
         def clear_persistent(cls) -> None:

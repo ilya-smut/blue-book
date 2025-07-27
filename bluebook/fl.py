@@ -13,7 +13,7 @@ from werkzeug.wrappers.response import Response
 
 from bluebook import configuration, data_models, database_manager, generator, token_manager
 from bluebook.enum_classes import BuiltInExams
-from bluebook.file_manager import FileManager
+from bluebook.file_manager import UploadedFilesManager
 
 # Compute the directory of the current file
 app_dir = Path(__file__).resolve().parent
@@ -632,7 +632,7 @@ def file_manager_page():
         app.logger.debug("Token not found. Sending token page.")
         return token_page
     
-    fm = FileManager(config['API_TOKEN'])
+    fm = UploadedFilesManager(config['API_TOKEN'])
     available_files = fm.list_files(names_only=True)
 
     custom={'header': 'Files Manager'}
@@ -648,7 +648,7 @@ def delete_file():
         app.logger.debug("Token not found. Sending token page.")
         return token_page
     
-    fm = FileManager(config['API_TOKEN'])
+    fm = UploadedFilesManager(config['API_TOKEN'])
     
     if "file-name" in request.form:
         filename = request.form['file-name']

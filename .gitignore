@@ -6,3 +6,4 @@ dist/
 database.db
 .mypy_cache/
 .ruff_cache/
+bluebook/media
