@@ -12,6 +12,8 @@ from flask.wrappers import Response as FlaskResponse
 from werkzeug.wrappers.response import Response
 
 from bluebook import configuration, data_models, database_manager, generator, token_manager
+from bluebook.enum_classes import BuiltInExams
+from bluebook.file_manager import FileManager
 
 # Compute the directory of the current file
 app_dir = Path(__file__).resolve().parent
@@ -25,7 +27,7 @@ static_dir = Path(app_dir) / "static"
 app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
 state: dict[str, Any] = {
     "question_list": list[data_models.Question](),
-    "exam_id": 0,
+    "exam_id": BuiltInExams.SECURITY_PLUS.value,
     "init": True,
 }  # Initial exam - always sec+ as for now
 app.secret_key = secrets.randbits(256).to_bytes(32, "big")  # Generate a random secret key
@@ -619,6 +621,46 @@ def delete_custom_exam() -> Response:
     else:
         app.logger.debug("Exam id not present in request form. Abort removing exam.")
     return redirect("/exam-constructor")
+
+
+@app.route("/files-manager", methods=["GET"])
+def file_manager_page():
+    config = token_manager.load_config()
+    ensure_session()
+
+    if token_page := token_manager.ensure_token(config):
+        app.logger.debug("Token not found. Sending token page.")
+        return token_page
+    
+    fm = FileManager(config['API_TOKEN'])
+    available_files = fm.list_files(names_only=True)
+
+    custom={'header': 'Files Manager'}
+
+    return render_template("files_manager.html.j2", custom=custom, available_files=available_files)
+
+@app.route("/files-manager/delete-file", methods=["POST"])
+def delete_file():
+    config = token_manager.load_config()
+    ensure_session()
+
+    if token_page := token_manager.ensure_token(config):
+        app.logger.debug("Token not found. Sending token page.")
+        return token_page
+    
+    fm = FileManager(config['API_TOKEN'])
+    
+    if "file-name" in request.form:
+        filename = request.form['file-name']
+        if filename:
+            fm.delete_file(name=filename.split("/")[1])
+            app.logger.debug(f"Deleted file {filename.split('/')[1]}")
+        else:
+            app.logger.debug("Received empty file")
+    else:
+        app.logger.debug(f"Form did not containt file name. Cannot delete file.")
+    
+    return redirect("/files-manager")
 
 
 @click.group()

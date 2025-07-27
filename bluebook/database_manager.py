@@ -16,6 +16,7 @@ from sqlmodel import (
 
 from bluebook import data_models
 from bluebook.configuration import Configuration
+from bluebook.enum_classes import BuiltInExams
 
 logger = logging.getLogger("bluebook.database_manager")
 
@@ -87,9 +88,9 @@ class Database:
 
         # Initialising built-in exams
         preset_exams = list[Exams]()
-        preset_exams.append(Exams(id=0, name="CompTIA Security+"))
-        preset_exams.append(Exams(id=1, name="CompTIA A+"))
-        preset_exams.append(Exams(id=2, name="CompTIA Network+"))
+        preset_exams.append(Exams(id=BuiltInExams.SECURITY_PLUS.value, name="CompTIA Security+"))
+        preset_exams.append(Exams(id=BuiltInExams.A_PLUS.value, name="CompTIA A+"))
+        preset_exams.append(Exams(id=BuiltInExams.NETWORK_PLUS.value, name="CompTIA Network+"))
         for exam in preset_exams:
             with Session(self.engine) as session:
                 try:

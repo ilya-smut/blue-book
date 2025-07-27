@@ -1,0 +1,15 @@
+{% extends "stripped_base.html.j2" %}
+{% block content %}
+<div id="uploaded-files" style="justify-content: center;display: grid;max-width: 400px;justify-items: center;">
+    <h2>Uploaded Files: </h2>
+    {% for file in available_files%}
+        <div>
+            <p>{{file.name}}</p>
+            <form method="POST">
+                <input type="hidden" name="file-name" id="file-name" value="{{file.name}}">
+                <button class="subtle-blue-btn" formaction="{{url_for('delete_file')}}">Delete</button>
+            </form>
+        </div>
+    {% endfor %}
+</div>
+{% endblock content%}
