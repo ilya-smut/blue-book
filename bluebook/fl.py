@@ -13,7 +13,7 @@ from werkzeug.wrappers.response import Response
 
 from bluebook import configuration, data_models, database_manager, generator, token_manager
 from bluebook.enum_classes import BuiltInExams
-from bluebook.file_manager import UploadedFilesManager
+from bluebook.file_manager import UploadedFilesManager, FileManager
 
 # Compute the directory of the current file
 app_dir = Path(__file__).resolve().parent
@@ -639,6 +639,33 @@ def file_manager_page():
 
     return render_template("files_manager.html.j2", custom=custom, available_files=available_files)
 
+@app.route("/files-manager/upload-local-file", methods=["POST"])
+def upload_file():
+    config = token_manager.load_config()
+    ensure_session()
+    if token_page := token_manager.ensure_token(config):
+        app.logger.debug("Token not found. Sending token page.")
+        return token_page
+    
+    fm = FileManager(config['API_TOKEN'])
+
+    if request.files:
+        file = request.files['file']
+        filepath = fm.local_media_manager.media_dir / Path(file.filename)
+        app.logger.debug("Saving to media "+file.filename)
+        file.save(filepath) # Saving to media directory
+        app.logger.debug("Saved to media as "+str(filepath))
+        if filepath:
+            fm.upload_local_file(filepath=Path(filepath))
+        else:
+            app.logger.debug("Filepath empty.")
+    else:
+        app.logger.debug(f"Form did not containt file name. Cannot upload file.")
+    
+    return redirect("/files-manager")
+
+
+
 @app.route("/files-manager/delete-file", methods=["POST"])
 def delete_file():
     config = token_manager.load_config()
@@ -648,12 +675,12 @@ def delete_file():
         app.logger.debug("Token not found. Sending token page.")
         return token_page
     
-    fm = UploadedFilesManager(config['API_TOKEN'])
+    fm = FileManager(config['API_TOKEN'])
     
     if "file-name" in request.form:
         filename = request.form['file-name']
         if filename:
-            fm.delete_file(name=filename.split("/")[1])
+            fm.delete_file_by_name(filename.split("/")[1])
             app.logger.debug(f"Deleted file {filename.split('/')[1]}")
         else:
             app.logger.debug("Received empty file")
@@ -715,6 +742,11 @@ def start(debug: bool) -> None:
                         "propagate": False,
                     },
                     "bluebook.data_models": {
+                        "level": "DEBUG",
+                        "handlers": ["wsgi"],
+                        "propagate": False,
+                    },
+                    "bluebook.file_manager": {
                         "level": "DEBUG",
                         "handlers": ["wsgi"],
                         "propagate": False,

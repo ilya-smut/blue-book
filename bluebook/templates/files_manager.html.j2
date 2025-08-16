@@ -1,5 +1,12 @@
 {% extends "stripped_base.html.j2" %}
 {% block content %}
+<div id="file-uploader" style="justify-content: center;display: grid;max-width: 400px;justify-items: center;">
+    <h3>Upload new file</h3>
+    <form method="POST" action="{{url_for('upload_file')}}" method="POST" enctype="multipart/form-data">
+        <p><input class="subtle-blue-btn" type="file" name="file" accept="application/pdf"></p>
+        <p><input class="subtle-blue-btn" type="submit" value="Submit"></p>
+    </form>
+</div>
 <div id="uploaded-files" style="justify-content: center;display: grid;max-width: 400px;justify-items: center;">
     <h2>Uploaded Files: </h2>
     {% for file in available_files%}
