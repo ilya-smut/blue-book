@@ -672,6 +672,49 @@ def delete_from_remote():
     fm.remove_from_remote(filename)
     return files_page()
 
+@app.route("/attached_to_exam", methods=["GET"])
+def attached_files(exam_id: int|None = None, exam_name: str|None = None):
+    ensure_session()
+    if not exam_id:
+        exam_id = request.args.get("exam-id")
+    if not exam_name:
+        exam_name = request.args.get("exam-name")
+    custom = {"header": f"Files attached to {exam_name}", "exam_name": exam_name, "exam_id": exam_id}
+    local_files = fm.ls_cache_dir(str_names=True)
+    attached_files = []
+    afs = db_manager.select_attached_files(exam_id=exam_id)
+    for row in afs:
+        attached_files.append(row['name'])
+    return render_template("attached_files.html.j2", custom=custom, local_files=local_files, attached_files=attached_files)
+
+@app.route("/attached_to_exam/attach", methods=["POST"])
+def attach_to_exam():
+    ensure_session()
+    exam_name = request.form.get("exam-name")
+    exam_id = request.form.get("exam-id")
+    filename = request.form.get("filename")
+    local_files = set(fm.ls_cache_dir(str_names=True))
+    app.logger.info(f"Attaching {filename} {exam_id} to {exam_name}")
+    app.logger.debug(f"Locally present files: {local_files}")
+    if filename in local_files and exam_id:
+        app.logger.debug(f"Started attaching...")
+        db_manager.add_attached_file(filename=filename, exam_id=int(exam_id))
+    return attached_files(exam_id=exam_id, exam_name=exam_name)
+
+@app.route("/attached_to_exam/remove", methods=["POST"])
+def remove_attached():
+    ensure_session()
+    exam_name = request.form.get("exam-name")
+    exam_id = request.form.get("exam-id")
+    filename = request.form.get("filename")
+    app.logger.info(f"Removing attachment {filename} {exam_id} from {exam_name}")
+    if filename and exam_id:
+        app.logger.debug(f"Started removing...")
+        record = db_manager.select_attached_file_by_name(filename=filename, exam_id=exam_id)
+        if record:
+            app.logger.debug(f"Found record! {record}")
+            db_manager.remove_attached_file(id=record['id'])
+    return attached_files(exam_id=exam_id, exam_name=exam_name)
 
 @click.group()
 def bluebook() -> None:

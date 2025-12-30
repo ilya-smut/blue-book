@@ -29,6 +29,9 @@ class Configuration:
             """Clears the persistent database file."""
             if Path.exists(cls.DATABASE_PATH):
                 Path.unlink(cls.DATABASE_PATH)
+            if cls.FILES_CACHE_PATH.exists():
+                for file in cls.FILES_CACHE_PATH.iterdir():
+                    file.unlink()
 
     class DefaultValues:
         DEFAULT_EXAM_ID = 0     # CompTIA Security+ as a default exam
