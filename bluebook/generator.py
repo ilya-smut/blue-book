@@ -27,7 +27,7 @@ def sanitise_input(user_input: str) -> str:
     return sanitized
 
 
-def gen_default_query(exam_name: str, question_num: int, additional_request: str) -> str:
+def gen_default_query(exam_name: str, question_num: int, additional_request: str|None) -> str:
     """Generates a default query for the Gemini API to create multiple-choice questions.
     Args:
         exam_name (str): The name of the exam for which questions are to be generated.
@@ -73,7 +73,8 @@ Questions must mirror the style, rigor, and coverage of the actual {exam_name} e
 def ask_gemini(exam_name: str,
                question_num: int,
                token: Optional[str],
-               additional_request: str) -> list[data_models.Question]:
+               additional_request: str|None = None,
+               attached_files: list = []) -> list[data_models.Question]:
     """Query the Gemini API to generate multiple-choice questions.
     Args:
         exam_name (str): The name of the exam for which questions are to be generated.
@@ -87,10 +88,12 @@ def ask_gemini(exam_name: str,
         exam_name=exam_name, question_num=question_num, additional_request=additional_request,
     )
     client = genai.Client(api_key=token)
+    contents_list = [query]
+    contents_list.append(attached_files)
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
-            contents=query,
+            contents=contents_list,
             config={
                 "response_mime_type": "application/json",
                 "response_schema": list[data_models._RawQuestion],

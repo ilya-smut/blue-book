@@ -15,10 +15,14 @@ Path(get_config_directory()).mkdir(parents=True, exist_ok=True)
 
 class Configuration:
 
+    class LocalAppPath:
+        BLUEBOOK_DIR = Path(__file__).resolve().parent
+
     class SystemPath:
         CONFIG_DIR = get_config_directory()
         CONFIG_PATH = Path(CONFIG_DIR) / "config.json"
         DATABASE_PATH = Path(CONFIG_DIR) / "storage.db"
+        FILES_CACHE_PATH = Path(CONFIG_DIR) / "files/"
 
         @classmethod
         def clear_persistent(cls) -> None:
