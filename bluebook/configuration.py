@@ -32,3 +32,6 @@ class Configuration:
 
     class DefaultValues:
         DEFAULT_EXAM_ID = 0     # CompTIA Security+ as a default exam
+    
+    class DefaultPromptSettings:
+        pass

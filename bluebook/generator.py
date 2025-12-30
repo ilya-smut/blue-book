@@ -27,53 +27,102 @@ def sanitise_input(user_input: str) -> str:
     return sanitized
 
 
-def gen_default_query(exam_name: str, question_num: int, additional_request: str|None) -> str:
-    """Generates a default query for the Gemini API to create multiple-choice questions.
-    Args:
-        exam_name (str): The name of the exam for which questions are to be generated.
-        question_num (int): The number of questions to generate.
-        additional_request (str): Any additional request or focus area for the questions.
-    Returns:
-        str: The generated query string.
-    """
-    prompt = f"""
-You are a world-class {exam_name} examiner.
-You have 10 years of experience designing official exam questions.
-Your goal is to produce exactly {question_num} multiple-choice questions.
-Questions must mirror the style, rigor, and coverage of the actual {exam_name} exam.
+class PromptBuilder:
+    EXAM_NAME_ANCHOR="##__EXAM_NAME_ANCHOR__##"
+    QUESTION_NUM_ANCHOR="##__QUESTION_NUM_ANCHOR__##"
+    ADDITIONAL_REQUESTS_ANCHOR="##__ADDITIONAL_REQUEST_ANCHOR__##"
 
-## Task
-1. Create {question_num} distinct multiple-choice questions (questions only—no essays).
-2. For each question:
-   - Provide 4 answer options.
-   - Indicate the correct option.
-   - Give a concise explanation of why the correct answer is right.
-   - Produce a detailed study recommendation that will help student to understand the question.
+    @staticmethod
+    def append_default_header(prompt: str, exam_name, question_num):
+        prompt += f"""
+        You are a world-class {exam_name} examiner.
+        You have 10 years of experience designing official exam questions.
+        Your goal is to produce exactly {question_num} multiple-choice questions.
+        Questions must mirror the style, rigor, and coverage of the actual {exam_name} exam.
 
-## Focus
-"""
-    if additional_request:
-        prompt += f"- The student asked to focus on: “{additional_request}”.  \n"
-        prompt += ("- Questions should cover that topic and closely "
-            "related {exam_name} exam objectives.\n")
-    else:
-        prompt += ("- No additional topic requested; cover a "
-            "representative range of {exam_name} exam objectives.\n")
+        """
+        return prompt
+    
+    @staticmethod
+    def append_default_task_spec(prompt, question_num):
+        prompt += f"""
+        ## Task
+        1. Create {question_num} distinct multiple-choice questions (questions only—no essays).
+        2. For each question:
+            - Provide 4 answer options.
+            - Indicate the correct option.
+            - Give a concise explanation of why the correct answer is right.
+            - Produce a detailed study recommendation that will help student to understand the question.
 
-    prompt += """
-## Constraints
-- Questions must be non-trivial (medium to high difficulty).
-- Avoid any ambiguous wording; each question must have a single clear correct answer.
-- Do not include any references to “examiner”, "student" or “you” in the question text.
-"""
+        """
+        return prompt
+    
+    @staticmethod
+    def append_default_focus(prompt, exam_name, additional_request):
+        prompt += f"""
+        ## Focus
+        - The student asked to focus on: “{additional_request}”.
+        Questions should cover that topic and be closely related to
+        {exam_name} exam objectives.
 
-    return prompt
+        """
+        return prompt
+
+    @staticmethod
+    def append_default_constraints(prompt):
+        prompt += """
+        ## Constraints
+        - Questions must be non-trivial (medium to high difficulty).
+        - Avoid any ambiguous wording; each question must have a single clear correct answer.
+        - Do not include any references to "examiner", "student" or "you" in the question text.
+
+        """
+        return prompt
+
+    @staticmethod
+    def build_default_query(exam_name: str, question_num: int, additional_request: str|None) -> str:
+        prompt = ""
+        prompt = PromptBuilder.append_default_header(prompt, exam_name, question_num)
+        prompt = PromptBuilder.append_default_task_spec(prompt, question_num)
+        if additional_request:
+            prompt = PromptBuilder.append_default_focus(prompt, exam_name, additional_request)
+        prompt = PromptBuilder.append_default_constraints(prompt)
+        return prompt
+    
+    @classmethod
+    def build_template_query(cls):
+        return cls.build_default_query(exam_name=cls.EXAM_NAME_ANCHOR, question_num=cls.QUESTION_NUM_ANCHOR, additional_request=cls.ADDITIONAL_REQUESTS_ANCHOR)
+    
+    @classmethod
+    def verify_template_prompt(cls, prompt):
+        anchors = [cls.EXAM_NAME_ANCHOR, cls.QUESTION_NUM_ANCHOR, cls.ADDITIONAL_REQUESTS_ANCHOR]
+        cumulative_flag = True
+        i = 0
+        while cumulative_flag and i<len(anchors):
+            cumulative_flag = cumulative_flag and (anchors[i] in prompt)
+            i+=1
+        return cumulative_flag
+    
+    @classmethod
+    def build_custom_prompt(cls, template_query: str, exam_name: str, question_num: int, additional_request: str) -> str:
+        replacements = {
+            cls.EXAM_NAME_ANCHOR: exam_name,
+            cls.QUESTION_NUM_ANCHOR: str(question_num),
+            cls.ADDITIONAL_REQUESTS_ANCHOR: additional_request,
+        }
+        if not cls.verify_template_prompt(template_query):
+            prompt = cls.build_default_query(exam_name=exam_name, question_num=question_num, additional_request=additional_request)
+            return prompt
+        prompt = re.compile("|".join(map(re.escape, replacements)))
+        return prompt.sub(lambda m: replacements[m.group(0)], template_query)
+                
 
 
 def ask_gemini(exam_name: str,
                question_num: int,
                token: Optional[str],
                additional_request: str|None = None,
+               custom_prompt: str|None = None,
                attached_files: list = []) -> list[data_models.Question]:
     """Query the Gemini API to generate multiple-choice questions.
     Args:
@@ -84,16 +133,20 @@ def ask_gemini(exam_name: str,
     Returns:
         list[data_models.Question]: A list of generated questions.
     """
-    query = gen_default_query(
-        exam_name=exam_name, question_num=question_num, additional_request=additional_request,
-    )
+    if not custom_prompt:
+        query = PromptBuilder.build_default_query(
+            exam_name=exam_name, question_num=question_num, additional_request=additional_request,
+        )
+    else:
+        query = custom_prompt
     client = genai.Client(api_key=token)
-    contents_list = [query]
-    contents_list.append(attached_files)
+    contents = [query]
+    if attached_files:
+        contents.extend(attached_files)
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
-            contents=contents_list,
+            contents=contents,
             config={
                 "response_mime_type": "application/json",
                 "response_schema": list[data_models._RawQuestion],
