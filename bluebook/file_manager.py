@@ -1,8 +1,9 @@
-from bluebook import generator, token_manager
+from bluebook import token_manager
 from bluebook.configuration import Configuration
 from google import genai
 from pathlib import Path
 import shutil
+from werkzeug.datastructures import FileStorage
 
 
 class FileManager:
@@ -102,4 +103,9 @@ class FileManager:
         print(key)
         if key:
             self.client.files.delete(name=key)
+    
+    def form_file2cache(self, file: FileStorage):
+        dst_path = self.dst_dir / file.filename
+        file.save(dst=dst_path)
+        return file.name
 

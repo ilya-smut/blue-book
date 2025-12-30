@@ -10,8 +10,9 @@ import sqlalchemy.exc
 from flask import Flask, jsonify, redirect, render_template, request, session
 from flask.wrappers import Response as FlaskResponse
 from werkzeug.wrappers.response import Response
+from werkzeug.utils import secure_filename
 
-from bluebook import configuration, data_models, database_manager, generator, token_manager
+from bluebook import configuration, data_models, database_manager, generator, token_manager, file_manager
 
 # Compute the directory of the current file
 app_dir = Path(__file__).resolve().parent
@@ -30,6 +31,7 @@ state: dict[str, Any] = {
 }  # Initial exam - always sec+ as for now
 app.secret_key = secrets.randbits(256).to_bytes(32, "big")  # Generate a random secret key
 db_manager = database_manager.Database()
+fm = file_manager.FileManager()
 
 
 def concatenate_state_log(state_log: Optional[dict[str, Any]] = None) -> str:
@@ -40,10 +42,10 @@ def concatenate_state_log(state_log: Optional[dict[str, Any]] = None) -> str:
         global state
         num_of_questions = str(len(state["question_list"]))
         return (f"State[ {num_of_questions} questions, "
-                "exam_id={state['exam_id']}, is_init={state['init']}]")
+                f"exam_id={state['exam_id']}, is_init={state['init']}]")
     num_of_questions = str(len(state_log["question_list"]))
     return (f"State[ {num_of_questions} questions, "
-            "exam_id={state_log['exam_id']}, is_init={state_log['init']}]")
+            f"exam_id={state_log['exam_id']}, is_init={state_log['init']}]")
 
 
 def state_to_json_string() -> str:
@@ -619,6 +621,56 @@ def delete_custom_exam() -> Response:
     else:
         app.logger.debug("Exam id not present in request form. Abort removing exam.")
     return redirect("/exam-constructor")
+
+
+@app.route("/files", methods=["GET"])
+def files_page():
+    custom = {"header": "Files"}
+    ensure_session()
+    local_files = fm.ls_cache_dir(str_names=True)
+    gemini_files = list(fm.ls_remote().keys())
+    return render_template("uploaded_files.html.j2", custom=custom, local_files=local_files, gemini_files=gemini_files)
+
+@app.route("/files/upload/local", methods=["POST"])
+def upload_to_cache():
+    ensure_session()
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return "No file uploaded", 400
+    custom_name = request.form.get("custom_filename")
+    if custom_name:
+        file.filename = secure_filename(custom_name)
+    fm.form_file2cache(file=file)
+    return files_page()
+
+@app.route("/files/upload/remote", methods=["POST"])
+def upload_to_remote():
+    ensure_session()
+    filename = request.form.get("filename")
+    if filename:
+        filename = secure_filename(filename)
+    fm.upload_from_cache(name=filename, force_unique=True)
+    return files_page()
+
+@app.route("/files/delete/local", methods=["POST"])
+def delete_from_cache():
+    ensure_session()
+    filename = request.form.get("filename")
+    if not filename:
+        return "Empty Filename", 400
+    filename = secure_filename(filename)
+    fm.remove_from_cache(filename)
+    return files_page()
+
+@app.route("/files/delete/remote", methods=["POST"])
+def delete_from_remote():
+    ensure_session()
+    filename = request.form.get("filename")
+    if not filename:
+        return "Empty Filename", 400
+    filename = secure_filename(filename)
+    fm.remove_from_remote(filename)
+    return files_page()
 
 
 @click.group()

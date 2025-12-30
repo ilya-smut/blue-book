@@ -1,0 +1,284 @@
+{% extends "stripped_base.html.j2" %}
+{% block content %}
+
+<style>
+    /* Layout */
+    .files-grid {
+        display: flex;
+        gap: 24px;
+        width: 70%;
+        max-width: 1000px;
+        margin-top: 20px;
+        align-items: flex-start;
+    }
+
+    /* Make the SECTION itself the card (avoid using div because div is globally styled) */
+    .files-card {
+        flex: 1;
+        text-align: left;
+
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .card-header h2 {
+        margin: 0;
+        font-size: 18px;
+        color: #333;
+        white-space: nowrap; /* prevents "Local / cache" wrapping */
+    }
+
+    .upload-form {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 0;
+    }
+
+    .upload-form input[type="file"] {
+        max-width: 240px;
+    }
+
+    .upload-submit {
+    display: none;
+        }
+
+    .file-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        border-top: 1px solid #eee;
+    }
+
+    .file-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .file-name {
+        font-size: 14px;
+        color: #333;
+        overflow-wrap: anywhere;
+        flex: 1;
+    }
+
+    .file-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .file-actions form {
+        margin: 0;
+    }
+
+    .muted {
+        font-size: 14px;
+        color: #666;
+        margin: 0;
+    }
+
+    @media (max-width: 768px) {
+        .files-grid {
+        flex-direction: column;
+        width: 90%;
+        }
+
+        .upload-form input[type="file"] {
+        max-width: 100%;
+        }
+    }
+
+    .file-input-hidden {
+    display: none;
+    }
+
+    .file-choose-btn {
+    cursor: pointer;
+    white-space: nowrap;
+    }
+
+    .file-name-display {
+    font-size: 13px;
+    color: #555;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    }
+
+    .filename-input {
+    padding: 6px 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    width: 180px;
+    }
+
+    /* File present in both local + Gemini */
+    .synced {
+    background-color: #f0fbf4;
+    border-left: 4px solid #28a745;
+    }
+
+    .synced .file-name {
+    font-weight: 600;
+    }
+
+    .synced-badge {
+    font-size: 12px;
+    color: #28a745;
+    margin-left: 6px;
+    }
+
+</style>
+
+<main class="files-grid">
+
+  <!-- Local files -->
+  <section class="files-card">
+    <header class="card-header">
+        <h2>Local cache</h2>
+
+        <form class="upload-form"
+                method="post"
+                action="{{ url_for('upload_to_cache') }}"
+                enctype="multipart/form-data">
+
+            <input
+                type="file"
+                id="fileInput"
+                name="file"
+                class="file-input-hidden"
+            >
+
+            <label for="fileInput" class="subtle-blue-btn file-choose-btn">
+                Choose file
+            </label>
+
+            <span class="file-name-display" id="fileNameDisplay">
+                No file selected
+            </span>
+
+            <!-- Optional custom filename -->
+            <input
+                type="text"
+                name="custom_filename"
+                class="filename-input"
+                placeholder="Optional filename"
+                autocomplete="off"
+            >
+
+            <button type="submit" class="subtle-blue-btn upload-submit" id="uploadBtn">
+                Upload
+            </button>
+        </form>
+
+    </header>
+
+    {% if local_files %}
+      <ul class="file-list">
+        {% for name in local_files %}
+           <li class="file-row {% if name in gemini_files %}synced{% endif %}">
+            <span class="file-name">
+                {{ name }}
+                {% if name in gemini_files %}
+                    <span class="synced-badge">● synced</span>
+                {% endif %}
+            </span>
+            <span class="file-actions">
+              <form method="post" action="{{url_for('delete_from_cache')}}">
+                <input type="hidden" name="filename" value="{{ name }}">
+                <button class="subtle-blue-btn" type="submit">Delete</button>
+              </form>
+
+              <form method="post" action="{{url_for('upload_to_remote')}}">
+                <input type="hidden" name="filename" value="{{ name }}">
+                <button class="subtle-blue-btn" type="submit">Upload to Gemini</button>
+              </form>
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No local files found.</p>
+    {% endif %}
+  </section>
+
+  <!-- Gemini files -->
+  <section class="files-card">
+    <header class="card-header">
+      <h2>Gemini uploads</h2>
+    </header>
+
+    {% if gemini_files %}
+      <ul class="file-list">
+        {% for name in gemini_files %}
+          <li class="file-row {% if name in local_files %}synced{% endif %}">
+            <span class="file-name">
+                {{ name }}
+                {% if name in local_files %}
+                    <span class="synced-badge">● cached</span>
+                {% endif %}
+            </span>
+
+            <span class="file-actions">
+              <form method="post" action="{{url_for('delete_from_remote')}}">
+                <input type="hidden" name="filename" value="{{ name }}">
+                <button class="subtle-blue-btn" type="submit">Delete</button>
+              </form>
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No files uploaded to Gemini.</p>
+    {% endif %}
+  </section>
+
+</main>
+
+<script>
+  const input = document.getElementById("fileInput");
+  const label = document.getElementById("fileNameDisplay");
+  const nameField = document.querySelector("input[name='custom_filename']");
+  const uploadBtn = document.getElementById("uploadBtn");
+
+  if (input) {
+    input.addEventListener("change", () => {
+      if (input.files.length) {
+        const fname = input.files[0].name;
+        label.textContent = fname;
+
+        if (nameField && !nameField.value) {
+          nameField.value = fname;
+        }
+
+        // show upload button
+        uploadBtn.style.display = "inline-block";
+      } else {
+        label.textContent = "No file selected";
+        uploadBtn.style.display = "none";
+      }
+    });
+  }
+</script>
+
+{% endblock content %}
