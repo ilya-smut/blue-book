@@ -89,7 +89,7 @@ def ask_gemini(exam_name: str,
     client = genai.Client(api_key=token)
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash-lite-preview-02-05",
+            model="gemini-2.5-flash-lite",
             contents=query,
             config={
                 "response_mime_type": "application/json",
