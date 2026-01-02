@@ -14,6 +14,7 @@ from sqlmodel import (
     delete,
     select,
 )
+from sqlalchemy import event, Column, ForeignKey, Integer
 
 from bluebook import data_models
 from bluebook.configuration import Configuration
@@ -81,10 +82,25 @@ class AttachedFiles(SQLModel, table=True):
 class CustomPrompts(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("name"),)
     id: int | None = Field(default=None, primary_key=True)
-    exam_id: int = Field(default=None, foreign_key="exams.id")
     name: str
     prompt: str
 
+class MapsPromptExam(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    exam_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("exams.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+    prompt_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("customprompts.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
 
 class Database:
     def __init__(self, exam_id: int = Configuration.DefaultValues.DEFAULT_EXAM_ID) -> None:
@@ -99,6 +115,11 @@ class Database:
         self.exam_id = exam_id
         self.built_in_indices = set[int]()
         self.engine = create_engine(f"sqlite:///{Configuration.SystemPath.DATABASE_PATH}")
+        @event.listens_for(self.engine, "connect")
+        def _enable_sqlite_fk(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
         SQLModel.metadata.create_all(self.engine)
 
         # Initialising built-in exams
@@ -550,6 +571,94 @@ class Database:
         only_in_db = in_db - present_local
         for name in only_in_db:
             self.remove_attached_file(afs[name])
+
+    def add_custom_prompt(self, name, prompt):
+        af = CustomPrompts(name=name, prompt=prompt)
+        with Session(self.engine) as session, contextlib.suppress(sqlalchemy.exc.IntegrityError):
+            session.add(af)
+            session.commit()
+            # if exception occurs, it means that such name exists already
+    
+    def select_prompt_by_id(self, prompt_id):
+        with Session(self.engine) as session:
+            prompt = session.exec(select(CustomPrompts).where(CustomPrompts.id == prompt_id)).first()
+            if prompt:
+                custom_prompt = {"id": prompt.id, 'name': prompt.name, 'prompt': prompt.prompt}
+                return custom_prompt
+        return None
+    
+    def select_prompt_by_name(self, prompt_name):
+        with Session(self.engine) as session:
+            prompt = session.exec(select(CustomPrompts).where(CustomPrompts.name == prompt_name)).first()
+            if prompt:
+                custom_prompt = {"id": prompt.id, 'name': prompt.name, 'prompt': prompt.prompt}
+                return custom_prompt
+        return None
+    
+    def select_all_prompts(self):
+        with Session(self.engine) as session:
+            rows = session.exec(select(CustomPrompts))
+            prompts = [{"id": row.id, "name": row.name, 'prompt': row.prompt} for row in rows]
+            return prompts
+        return []
+    
+    def remove_prompt(self, prompt_name = None, prompt_id = None):
+        if not (prompt_name or prompt_id):
+            return None
+        with Session(self.engine) as session:
+            if prompt_name:
+                session.exec(delete(CustomPrompts).where(col(CustomPrompts.name) == prompt_name))
+                session.commit()
+            elif prompt_id:
+                session.exec(delete(CustomPrompts).where(col(CustomPrompts.id) == prompt_id))
+                session.commit()
+    
+    def add_prompt_exam_mapping(self, prompt_id, exam_id):
+        af = MapsPromptExam(exam_id=exam_id, prompt_id=prompt_id)
+        with Session(self.engine) as session, contextlib.suppress(sqlalchemy.exc.IntegrityError):
+            session.add(af)
+            session.commit()
+    
+    def select_all_prompt_mappings(self):
+        with Session(self.engine) as session:
+            rows = session.exec(select(MapsPromptExam))
+            mappings = [{"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id} for row in rows]
+            return mappings
+        return []
+    
+    def remove_prompt_mapping(self, mapping_id):
+        with Session(self.engine) as session:
+            session.exec(delete(MapsPromptExam).where(col(MapsPromptExam.id) == mapping_id))
+            session.commit()
+    
+    def select_prompt_mappings(self, mapping_id: int|None = None, prompt_id: int|None = None, exam_id: int|None = None):
+        if not (mapping_id or prompt_id or exam_id):
+            return self.select_all_prompt_mappings()
+        elif mapping_id:
+            with Session(self.engine) as session:
+                row = session.exec(select(MapsPromptExam).where(MapsPromptExam.id == mapping_id)).first()
+                mapping = {"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id}
+                return mapping
+        elif prompt_id and exam_id:
+            with Session(self.engine) as session:
+                row = session.exec(select(MapsPromptExam).where(MapsPromptExam.prompt_id == prompt_id).where(MapsPromptExam.exam_id == exam_id)).first()
+                mapping = {"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id}
+                return mapping
+        elif prompt_id:
+            with Session(self.engine) as session:
+                rows = session.exec(select(MapsPromptExam).where(MapsPromptExam.prompt_id == prompt_id))
+                mappings = [{"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id} for row in rows]
+                return mappings
+        elif exam_id:
+            with Session(self.engine) as session:
+                rows = session.exec(select(MapsPromptExam).where(MapsPromptExam.exam_id == exam_id))
+                mappings = [{"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id} for row in rows]
+                return mappings
+        else:
+            return None
+
+
+
         
 
 
