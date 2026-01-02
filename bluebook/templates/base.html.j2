@@ -50,6 +50,10 @@
             </select>
         {% endif %}
         <input type="text" name="additional_request" id="additional_request" style="display: block;margin-top: 10px;">
+        <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+            <input type="checkbox" name="use_attached_files" value="1">
+            Use attached files
+        </label>
         <div class="button-row">
             <input type="submit" value="Generate" class="subtle-blue-btn">
             {% if saved_topics['size'] %}

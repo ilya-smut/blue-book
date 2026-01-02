@@ -58,7 +58,7 @@ class FileManager:
     def ls_remote(self):
         if not self.client_init:
             return {}
-        files: dict[str, str] = dict()
+        files: dict[str, str] = {}
         for f in self.client.files.list():
             files[f.display_name] = f.name
         return files

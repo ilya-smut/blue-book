@@ -13,6 +13,7 @@ from werkzeug.wrappers.response import Response
 from werkzeug.utils import secure_filename
 
 from bluebook import configuration, data_models, database_manager, generator, token_manager, file_manager
+from bluebook.helpers.file_attachment import get_remote_attached_files
 
 # Compute the directory of the current file
 app_dir = Path(__file__).resolve().parent
@@ -223,6 +224,11 @@ def generate() -> str:
     app.logger.debug("session['submitted'] set to True")
 
     num_of_questions = int(request.form["num_of_questions"])
+    use_attached_files = bool(request.form.get("use_attached_files"))
+    app.logger.debug(f"Attached files were used? -> {use_attached_files}")
+    attached_files = []
+    if use_attached_files:
+        attached_files = get_remote_attached_files(db=db_manager, fl=fm)
     session["latest_num"] = str(num_of_questions)
     app.logger.debug("session['latest_num'] chaged", extra={"latest_num": session["latest_num"]})
 
@@ -246,6 +252,7 @@ def generate() -> str:
             question_num=num_of_questions,
             token=config["API_TOKEN"],
             additional_request=additional_request,
+            attached_files=attached_files
         )
         app.logger.debug("Recieved response!")
     except google.genai.errors.ClientError:
@@ -768,6 +775,11 @@ def start(debug: bool) -> None:
                         "propagate": False,
                     },
                     "bluebook.data_models": {
+                        "level": "DEBUG",
+                        "handlers": ["wsgi"],
+                        "propagate": False,
+                    },
+                    "bluebook.helpers.file_attachment": {
                         "level": "DEBUG",
                         "handlers": ["wsgi"],
                         "propagate": False,

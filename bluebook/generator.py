@@ -78,20 +78,31 @@ class PromptBuilder:
 
         """
         return prompt
+    
+    @staticmethod
+    def append_default_attached_files_handler(prompt):
+        prompt += """
+        ## Utilize Attached Files
+        A student has requested you to utilise the context provided in the files attached to the request.
+        Your primary focus MUST be on topics / context found in the attached files. 
+        """
+        return prompt
 
     @staticmethod
-    def build_default_query(exam_name: str, question_num: int, additional_request: str|None) -> str:
+    def build_default_query(exam_name: str, question_num: int, additional_request: str|None, are_files_attached: bool = False) -> str:
         prompt = ""
         prompt = PromptBuilder.append_default_header(prompt, exam_name, question_num)
         prompt = PromptBuilder.append_default_task_spec(prompt, question_num)
         if additional_request:
             prompt = PromptBuilder.append_default_focus(prompt, exam_name, additional_request)
+        if are_files_attached:
+            prompt = PromptBuilder.append_default_attached_files_handler(prompt)
         prompt = PromptBuilder.append_default_constraints(prompt)
         return prompt
     
     @classmethod
     def build_template_query(cls):
-        return cls.build_default_query(exam_name=cls.EXAM_NAME_ANCHOR, question_num=cls.QUESTION_NUM_ANCHOR, additional_request=cls.ADDITIONAL_REQUESTS_ANCHOR)
+        return cls.build_default_query(exam_name=cls.EXAM_NAME_ANCHOR, question_num=cls.QUESTION_NUM_ANCHOR, additional_request=cls.ADDITIONAL_REQUESTS_ANCHOR, are_files_attached=True)
     
     @classmethod
     def verify_template_prompt(cls, prompt):
@@ -135,7 +146,7 @@ def ask_gemini(exam_name: str,
     """
     if not custom_prompt:
         query = PromptBuilder.build_default_query(
-            exam_name=exam_name, question_num=question_num, additional_request=additional_request,
+            exam_name=exam_name, question_num=question_num, additional_request=additional_request, are_files_attached=bool(attached_files)
         )
     else:
         query = custom_prompt
