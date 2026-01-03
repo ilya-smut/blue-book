@@ -35,57 +35,53 @@ class PromptBuilder:
     @staticmethod
     def append_default_header(prompt: str, exam_name, question_num):
         prompt += f"""
-        You are a world-class {exam_name} examiner.
-        You have 10 years of experience designing official exam questions.
-        Your goal is to produce exactly {question_num} multiple-choice questions.
-        Questions must mirror the style, rigor, and coverage of the actual {exam_name} exam.
-
-        """
+You are a world-class {exam_name} examiner.
+You have 10 years of experience designing official exam questions.
+Your goal is to produce exactly {question_num} multiple-choice questions.
+Questions must mirror the style, rigor, and coverage of the actual {exam_name} exam.
+"""
         return prompt
     
     @staticmethod
     def append_default_task_spec(prompt, question_num):
         prompt += f"""
-        ## Task
-        1. Create {question_num} distinct multiple-choice questions (questions only—no essays).
-        2. For each question:
-            - Provide 4 answer options.
-            - Indicate the correct option.
-            - Give a concise explanation of why the correct answer is right.
-            - Produce a detailed study recommendation that will help student to understand the question.
-
-        """
+---- Task ----
+1. Create {question_num} distinct multiple-choice questions (questions only—no essays).
+2. For each question:
+    a. Provide 4 answer options.
+    b. Indicate the correct option.
+    c. Give a concise explanation of why the correct answer is right.
+    d. Produce a detailed study recommendation that will help student to understand the question.
+"""
         return prompt
     
     @staticmethod
     def append_default_focus(prompt, exam_name, additional_request):
         prompt += f"""
-        ## Focus
-        - The student asked to focus on: “{additional_request}”.
-        Questions should cover that topic and be closely related to
-        {exam_name} exam objectives.
-
-        """
+---- Focus ----
+The student asked to focus on: “{additional_request}”.
+Questions should cover that topic and be closely related to
+{exam_name} exam objectives
+"""
         return prompt
 
     @staticmethod
     def append_default_constraints(prompt):
         prompt += """
-        ## Constraints
-        - Questions must be non-trivial (medium to high difficulty).
-        - Avoid any ambiguous wording; each question must have a single clear correct answer.
-        - Do not include any references to "examiner", "student" or "you" in the question text.
-
-        """
+---- Constraints ----
+1. Questions must be non-trivial (medium to high difficulty).
+2. Avoid any ambiguous wording; each question must have a single clear correct answer.
+3. Do not include any references to "examiner", "student" or "you" in the question text
+"""
         return prompt
     
     @staticmethod
     def append_default_attached_files_handler(prompt):
         prompt += """
-        ## Utilize Attached Files
-        A student has requested you to utilise the context provided in the files attached to the request.
-        Your primary focus MUST be on topics / context found in the attached files. 
-        """
+---- Utilize Attached Files ----
+A student has requested you to utilize the context provided in the files attached to the request.
+Your primary focus MUST be on topics / context found in the attached files. 
+"""
         return prompt
 
     @staticmethod

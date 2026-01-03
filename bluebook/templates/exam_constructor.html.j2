@@ -10,12 +10,12 @@
                 <input type="hidden" name="exam-id" id="exam-id" value="{{exam['id']}}">
                 <button class="subtle-blue-btn" formaction="{{url_for('delete_custom_exam')}}">Delete</button>
             </form>
+            {% endif %}
             <form method="GET">
                 <input type="hidden" name="exam-id" id="exam-id" value="{{exam['id']}}">
                 <input type="hidden" name="exam-name" id="exam-name" value="{{exam['name']}}">
                 <button class="subtle-blue-btn" formaction="{{url_for('attached_files')}}">Attached Files</button>
             </form>
-            {% endif %}
         </div>
     {% endfor %}
     <h2>Constructor:</h2>

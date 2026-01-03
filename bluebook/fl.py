@@ -723,6 +723,16 @@ def remove_attached():
             db_manager.remove_attached_file(id=record['id'])
     return attached_files(exam_id=exam_id, exam_name=exam_name)
 
+@app.route("/custom_prompts", methods=["GET"])
+def custom_prompts():
+    ensure_session()
+    return render_template(
+        "prompt_builder.html.j2",
+        prompts={"prompt_list": []},
+        default_prompt_text=generator.PromptBuilder.build_template_query(),
+        custom = {"header": "Custom Prompts Builder"}
+    )
+
 @click.group()
 def bluebook() -> None:
     """

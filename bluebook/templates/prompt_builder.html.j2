@@ -1,0 +1,176 @@
+{% extends "stripped_base.html.j2" %}
+{% block content %}
+
+<style>
+  /* --- Page scope: Prompt Builder only --- */
+  .prompt-page {
+    width: min(980px, 92vw);
+    margin: 18px auto;
+    display: grid;
+    gap: 18px;
+    justify-items: stretch;
+  }
+
+  /* IMPORTANT: neutralize the global `div { ... }` inside this page */
+  .prompt-page div {
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin-top: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  /* Use SECTION as the "card" instead of div (since global div is toxic) */
+  .prompt-card {
+    background: #fff;
+    padding: 18px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    text-align: left;
+  }
+
+  .prompt-card h2 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    color: #222;
+  }
+
+  /* List */
+  .prompt-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .prompt-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fafafa;
+  }
+
+  .prompt-row p {
+    margin: 0;
+    font-size: 14px;
+    color: #222;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .prompt-actions {
+    display: flex;
+    gap: 8px;
+    background: none;
+    padding: 0;
+    box-shadow: none;
+    border-radius: 0;
+    width: auto;
+  }
+
+  /* Form */
+  .prompt-form {
+    display: grid;
+    gap: 12px;
+  }
+
+  .prompt-form label {
+    display: grid;
+    gap: 6px;
+    font-size: 14px;
+    color: #222;
+    margin: 0; /* avoid inheriting any weird margins */
+  }
+
+  .prompt-form input[type="text"],
+  .prompt-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #d9d9d9;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+  }
+
+  .prompt-form textarea {
+    min-height: 260px;
+    resize: vertical;
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+
+  .prompt-form .button-row {
+    margin-top: 6px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .prompt-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .prompt-actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+</style>
+
+<div class="prompt-page">
+
+  <section class="prompt-card">
+    <h2>Available prompts:</h2>
+
+    <div class="prompt-list">
+      {% for prompt in prompts["prompt_list"] %}
+        <div class="prompt-row">
+          <p>{{ prompt["name"] }}</p>
+
+          <div class="prompt-actions">
+            <form method="POST" class="control-button-form">
+              <input type="hidden" name="prompt-id" value="{{ prompt['id'] }}">
+              <button class="subtle-blue-btn"
+                      formaction="">
+                Delete
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="prompt-card">
+    <h2>Constructor:</h2>
+
+    <form class="prompt-form" method="POST" action="">
+      <label>
+        Name of the prompt:
+        <input name="prompt-name" id="prompt-name" type="text" required>
+      </label>
+
+      <label>
+        Prompt body:
+        <textarea name="prompt-text" id="prompt-text" required>{{ default_prompt_text }}</textarea>
+      </label>
+
+      <div class="button-row">
+        <button type="submit" class="subtle-blue-btn">Add new prompt</button>
+      </div>
+    </form>
+  </section>
+
+</div>
+
+{% endblock content %}
