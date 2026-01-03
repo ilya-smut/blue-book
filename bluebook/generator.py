@@ -26,11 +26,76 @@ def sanitise_input(user_input: str) -> str:
         sanitized = bleach.clean(sanitized)
     return sanitized
 
-
 class PromptBuilder:
-    EXAM_NAME_ANCHOR="##__EXAM_NAME_ANCHOR__##"
-    QUESTION_NUM_ANCHOR="##__QUESTION_NUM_ANCHOR__##"
-    ADDITIONAL_REQUESTS_ANCHOR="##__ADDITIONAL_REQUEST_ANCHOR__##"
+
+    class PromptTemplate:
+        EXAM_NAME_ANCHOR="##__EXAM_NAME_ANCHOR__##"
+        QUESTION_NUM_ANCHOR="##__QUESTION_NUM_ANCHOR__##"
+        ADDITIONAL_REQUEST_ANCHOR="##__ADDITIONAL_REQUEST_ANCHOR__##"
+        ADDITIONAL_REQUESTS_SECTION_START_ANCHOR = "##__ADDITIONAL_REQUESTS_SECTION_START__##"
+        ADDITIONAL_REQUESTS_SECTION_END_ANCHOR = "##__ADDITIONAL_REQUESTS_SECTION_END__##"
+        MANDATORY_ANCHORS = [EXAM_NAME_ANCHOR, QUESTION_NUM_ANCHOR]
+        OPTIONAL_ANCHORS = [ADDITIONAL_REQUEST_ANCHOR, ADDITIONAL_REQUESTS_SECTION_START_ANCHOR, ADDITIONAL_REQUESTS_SECTION_END_ANCHOR]
+
+        def __init__(self, prompt: str):
+            self.prompt = prompt
+            self.valid = self.verify_template_prompt(prompt=prompt)
+            self.optional_anchors = dict[str, bool]()
+            if not self.valid:
+                for anchor in self.OPTIONAL_ANCHORS:
+                    self.optional_anchors[anchor] = False
+            else:
+                for anchor in self.OPTIONAL_ANCHORS:
+                    if anchor in prompt:
+                        self.optional_anchors[anchor] = True
+                    else:
+                        self.optional_anchors[anchor] = False
+
+        @classmethod
+        def verify_template_prompt(cls, prompt):
+            mandatory_anchors = cls.MANDATORY_ANCHORS
+            cumulative_flag = True
+            i = 0
+            while cumulative_flag and i<len(mandatory_anchors):
+                cumulative_flag = cumulative_flag and (mandatory_anchors[i] in prompt)
+                i+=1
+            return cumulative_flag
+        
+        def is_valid(self):
+            return self.valid
+        
+        def has_additional_request_section(self):
+            has_start = self.optional_anchors[self.ADDITIONAL_REQUESTS_SECTION_START_ANCHOR]
+            has_end = self.optional_anchors[self.ADDITIONAL_REQUESTS_SECTION_END_ANCHOR]
+            has_placeholder = self.optional_anchors[self.ADDITIONAL_REQUEST_ANCHOR]
+            return has_start and has_end and has_placeholder
+        
+        def get_template_prompt(self, attempt_additional_response: bool):
+            compiled_prompt = None
+            if not self.valid:
+                return compiled_prompt
+            if self.has_additional_request_section() and attempt_additional_response:
+                compiled_prompt =  "\n".join(
+                    line for line in self.prompt.splitlines()
+                    if line != self.ADDITIONAL_REQUESTS_SECTION_START_ANCHOR and line != self.ADDITIONAL_REQUESTS_SECTION_END_ANCHOR
+                )
+            elif self.has_additional_request_section and (not attempt_additional_response):
+                out: list[str] = []
+                skip = False
+                for line in self.prompt.splitlines():
+                    if line == self.ADDITIONAL_REQUESTS_SECTION_START_ANCHOR:
+                        skip = True
+                        continue
+                    if line == self.ADDITIONAL_REQUESTS_SECTION_END_ANCHOR:
+                        skip = False
+                        continue
+                    if not skip:
+                        out.append(line)
+                compiled_prompt = "\n".join(out)
+            
+            return compiled_prompt
+
+        
 
     @staticmethod
     def append_default_header(prompt: str, exam_name, question_num):
@@ -42,8 +107,8 @@ Questions must mirror the style, rigor, and coverage of the actual {exam_name} e
 """
         return prompt
     
-    @staticmethod
-    def append_default_task_spec(prompt, question_num):
+    @classmethod
+    def append_default_task_spec(cls, prompt, question_num):
         prompt += f"""
 ---- Task ----
 1. Create {question_num} distinct multiple-choice questions (questions only—no essays).
@@ -55,18 +120,23 @@ Questions must mirror the style, rigor, and coverage of the actual {exam_name} e
 """
         return prompt
     
-    @staticmethod
-    def append_default_focus(prompt, exam_name, additional_request):
-        prompt += f"""
----- Focus ----
+    @classmethod
+    def append_default_focus(cls, prompt, exam_name, additional_request, with_headers: bool = False):
+        if with_headers:
+            prompt += f"\n{cls.PromptTemplate.ADDITIONAL_REQUESTS_SECTION_START_ANCHOR}\n"
+        else:
+            prompt += "\n"
+        prompt += f"""---- Focus ----
 The student asked to focus on: “{additional_request}”.
 Questions should cover that topic and be closely related to
 {exam_name} exam objectives
 """
+        if with_headers:
+            prompt += f"{cls.PromptTemplate.ADDITIONAL_REQUESTS_SECTION_END_ANCHOR}\n"
         return prompt
 
-    @staticmethod
-    def append_default_constraints(prompt):
+    @classmethod
+    def append_default_constraints(cls, prompt):
         prompt += """
 ---- Constraints ----
 1. Questions must be non-trivial (medium to high difficulty).
@@ -75,8 +145,8 @@ Questions should cover that topic and be closely related to
 """
         return prompt
     
-    @staticmethod
-    def append_default_attached_files_handler(prompt):
+    @classmethod
+    def append_default_attached_files_handler(cls, prompt):
         prompt += """
 ---- Utilize Attached Files ----
 A student has requested you to utilize the context provided in the files attached to the request.
@@ -84,13 +154,13 @@ Your primary focus MUST be on topics / context found in the attached files.
 """
         return prompt
 
-    @staticmethod
-    def build_default_query(exam_name: str, question_num: int, additional_request: str|None, are_files_attached: bool = False) -> str:
+    @classmethod
+    def build_default_query(cls, exam_name: str, question_num: int, additional_request: str|None, are_files_attached: bool = False, with_headers: bool = False) -> str:
         prompt = ""
         prompt = PromptBuilder.append_default_header(prompt, exam_name, question_num)
         prompt = PromptBuilder.append_default_task_spec(prompt, question_num)
         if additional_request:
-            prompt = PromptBuilder.append_default_focus(prompt, exam_name, additional_request)
+            prompt = PromptBuilder.append_default_focus(prompt, exam_name, additional_request, with_headers=with_headers)
         if are_files_attached:
             prompt = PromptBuilder.append_default_attached_files_handler(prompt)
         prompt = PromptBuilder.append_default_constraints(prompt)
@@ -98,30 +168,21 @@ Your primary focus MUST be on topics / context found in the attached files.
     
     @classmethod
     def build_template_query(cls):
-        return cls.build_default_query(exam_name=cls.EXAM_NAME_ANCHOR, question_num=cls.QUESTION_NUM_ANCHOR, additional_request=cls.ADDITIONAL_REQUESTS_ANCHOR, are_files_attached=True)
-    
-    @classmethod
-    def verify_template_prompt(cls, prompt):
-        anchors = [cls.EXAM_NAME_ANCHOR, cls.QUESTION_NUM_ANCHOR, cls.ADDITIONAL_REQUESTS_ANCHOR]
-        cumulative_flag = True
-        i = 0
-        while cumulative_flag and i<len(anchors):
-            cumulative_flag = cumulative_flag and (anchors[i] in prompt)
-            i+=1
-        return cumulative_flag
+        return cls.build_default_query(exam_name=cls.PromptTemplate.EXAM_NAME_ANCHOR, question_num=cls.PromptTemplate.QUESTION_NUM_ANCHOR, additional_request=cls.PromptTemplate.ADDITIONAL_REQUEST_ANCHOR, are_files_attached=True, with_headers=True)
     
     @classmethod
     def build_custom_prompt(cls, template_query: str, exam_name: str, question_num: int, additional_request: str) -> str:
         replacements = {
-            cls.EXAM_NAME_ANCHOR: exam_name,
-            cls.QUESTION_NUM_ANCHOR: str(question_num),
-            cls.ADDITIONAL_REQUESTS_ANCHOR: additional_request,
+            cls.PromptTemplate.EXAM_NAME_ANCHOR: exam_name,
+            cls.PromptTemplate.QUESTION_NUM_ANCHOR: str(question_num),
+            cls.PromptTemplate.ADDITIONAL_REQUEST_ANCHOR: additional_request,
         }
-        if not cls.verify_template_prompt(template_query):
+        template = cls.PromptTemplate(template_query)
+        if not template.is_valid:
             prompt = cls.build_default_query(exam_name=exam_name, question_num=question_num, additional_request=additional_request)
             return prompt
         prompt = re.compile("|".join(map(re.escape, replacements)))
-        return prompt.sub(lambda m: replacements[m.group(0)], template_query)
+        return prompt.sub(lambda m: replacements[m.group(0)], template.get_template_prompt(attempt_additional_response=bool(additional_request)))
                 
 
 
@@ -145,7 +206,8 @@ def ask_gemini(exam_name: str,
             exam_name=exam_name, question_num=question_num, additional_request=additional_request, are_files_attached=bool(attached_files)
         )
     else:
-        query = custom_prompt
+        query = PromptBuilder.build_custom_prompt(template_query=custom_prompt, exam_name=exam_name, question_num=question_num, additional_request=additional_request)
+    logger.debug(f"Using following prompt: {query}")
     client = genai.Client(api_key=token)
     contents = [query]
     if attached_files:

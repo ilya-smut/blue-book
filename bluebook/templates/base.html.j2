@@ -40,6 +40,14 @@
             {% if session['latest_num'] != "10"%}<option value="10">10</option>{%endif%}
             {% if session['latest_num'] != "20"%}<option value="20">20</option>{%endif%}
         </select>
+        <br>
+        <label for="prompt_label">Prompt:</label>
+        <select name="prompt" id="prompt" class="question-dropdown">
+            <option value="0">Built-in</option>
+            {% for prompt in session['prompts'] %}
+            <option value="{{prompt['id']}}">{{prompt['name']}}</option>
+            {%endfor%}
+        </select>
         <label for="additional_request" style="padding-top: 10px;">Topic to focus on (90 characters max):</label>
         {% if saved_topics['size'] %}
             <select name="additional_request_preset" id="additional_request_preset" class="question-dropdown">

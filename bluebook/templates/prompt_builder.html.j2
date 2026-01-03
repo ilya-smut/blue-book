@@ -43,6 +43,11 @@
     gap: 10px;
   }
 
+  .prompt-item {
+    display: grid;
+    gap: 8px;
+  }
+
   .prompt-row {
     display: flex;
     align-items: center;
@@ -74,6 +79,50 @@
     width: auto;
   }
 
+  /* View panel */
+  .prompt-viewer {
+    display: none; /* toggled by JS */
+    border: 1px solid #e6e6e6;
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .prompt-viewer.is-open {
+    display: block;
+  }
+
+  .prompt-viewer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .prompt-viewer-title {
+    margin: 0;
+    font-size: 13px;
+    color: #444;
+    font-weight: 600;
+  }
+
+  .prompt-viewer pre {
+    margin: 0;
+    padding: 10px;
+    border-radius: 6px;
+    background: #f7f7f7;
+    border: 1px solid #eee;
+    font-size: 13px;
+    line-height: 1.45;
+    overflow: auto;
+    max-height: 320px;
+    white-space: pre-wrap;     /* keep newlines, wrap long lines */
+    word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    color: #222;
+  }
+
   /* Form */
   .prompt-form {
     display: grid;
@@ -85,7 +134,7 @@
     gap: 6px;
     font-size: 14px;
     color: #222;
-    margin: 0; /* avoid inheriting any weird margins */
+    margin: 0;
   }
 
   .prompt-form input[type="text"],
@@ -134,17 +183,40 @@
 
     <div class="prompt-list">
       {% for prompt in prompts["prompt_list"] %}
-        <div class="prompt-row">
-          <p>{{ prompt["name"] }}</p>
+        <div class="prompt-item">
+          <div class="prompt-row">
+            <p title="{{ prompt['name'] }}">{{ prompt["name"] }}</p>
 
-          <div class="prompt-actions">
-            <form method="POST" class="control-button-form">
-              <input type="hidden" name="prompt-id" value="{{ prompt['id'] }}">
-              <button class="subtle-blue-btn"
-                      formaction="">
-                Delete
+            <div class="prompt-actions">
+              <!-- VIEW (no backend; JS toggle) -->
+              <button
+                type="button"
+                class="subtle-blue-btn"
+                data-toggle="prompt-viewer"
+                data-target="viewer-{{ prompt['id'] }}"
+                aria-expanded="false"
+                aria-controls="viewer-{{ prompt['id'] }}"
+              >
+                View
               </button>
-            </form>
+
+              <!-- DELETE (backend) -->
+              <form method="POST" class="control-button-form">
+                <input type="hidden" name="id" value="{{ prompt['id'] }}">
+                <button class="subtle-blue-btn"
+                        formaction="{{url_for('delete_custom_prompt')}}">
+                  Delete
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Viewer (hidden until toggled) -->
+          <div class="prompt-viewer" id="viewer-{{ prompt['id'] }}">
+            <div class="prompt-viewer-head">
+              <p class="prompt-viewer-title">Prompt text</p>
+            </div>
+            <pre>{{ prompt['prompt'] }}</pre>
           </div>
         </div>
       {% endfor %}
@@ -154,15 +226,15 @@
   <section class="prompt-card">
     <h2>Constructor:</h2>
 
-    <form class="prompt-form" method="POST" action="">
+    <form class="prompt-form" method="POST" action="{{url_for('add_custom_prompt')}}">
       <label>
         Name of the prompt:
-        <input name="prompt-name" id="prompt-name" type="text" required>
+        <input name="name" id="name" type="text" required>
       </label>
 
       <label>
         Prompt body:
-        <textarea name="prompt-text" id="prompt-text" required>{{ default_prompt_text }}</textarea>
+        <textarea name="prompt" id="prompt" required>{{ default_prompt_text }}</textarea>
       </label>
 
       <div class="button-row">
@@ -172,5 +244,25 @@
   </section>
 
 </div>
+
+<script>
+  (function () {
+    const buttons = document.querySelectorAll('button[data-toggle="prompt-viewer"]');
+
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-target");
+        if (!id) return;
+
+        const panel = document.getElementById(id);
+        if (!panel) return;
+
+        const isOpen = panel.classList.toggle("is-open");
+        btn.setAttribute("aria-expanded", String(isOpen));
+        btn.textContent = isOpen ? "Hide" : "View";
+      });
+    });
+  })();
+</script>
 
 {% endblock content %}

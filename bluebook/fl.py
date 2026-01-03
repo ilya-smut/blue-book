@@ -115,6 +115,7 @@ def ensure_session() -> None:
     if "TOKEN_PRESENT" not in session:
         session["TOKEN_PRESENT"] = False
         app.logger.debug("session['TOKEN_PRESENT'] initialised to False.")
+    session["prompts"] = [{"id": prompt["id"], "name": prompt["name"]} for prompt in db_manager.select_all_prompts()]
 
 
 def obtain_saved_topics() -> dict[str, Any]:
@@ -215,23 +216,24 @@ def generate() -> str:
     """
     config = token_manager.load_config()
     ensure_session()
-
     if token_page := token_manager.ensure_token(config):
         app.logger.debug("Token not found. Sending token page.")
         return token_page
-
     session["submitted"] = True
     app.logger.debug("session['submitted'] set to True")
-
     num_of_questions = int(request.form["num_of_questions"])
     use_attached_files = bool(request.form.get("use_attached_files"))
+    prompt_id = int(request.form["prompt"])
+    custom_prompt = None
+    if prompt_id != 0:
+        app.logger.debug(f"Custom prompt selected id: {prompt_id}")
+        custom_prompt = db_manager.select_prompt_by_id(prompt_id=prompt_id)['prompt']
     app.logger.debug(f"Attached files were used? -> {use_attached_files}")
     attached_files = []
     if use_attached_files:
         attached_files = get_remote_attached_files(db=db_manager, fl=fm)
     session["latest_num"] = str(num_of_questions)
     app.logger.debug("session['latest_num'] chaged", extra={"latest_num": session["latest_num"]})
-
     additional_request = generator.sanitise_input(str(request.form["additional_request"]))
     if request.form.get("additional_request_preset"):
             additional_request = generator.sanitise_input(
@@ -252,7 +254,8 @@ def generate() -> str:
             question_num=num_of_questions,
             token=config["API_TOKEN"],
             additional_request=additional_request,
-            attached_files=attached_files
+            attached_files=attached_files,
+            custom_prompt=custom_prompt
         )
         app.logger.debug("Recieved response!")
     except google.genai.errors.ClientError:
@@ -726,12 +729,28 @@ def remove_attached():
 @app.route("/custom_prompts", methods=["GET"])
 def custom_prompts():
     ensure_session()
+    available_prompts = db_manager.select_all_prompts()
     return render_template(
         "prompt_builder.html.j2",
-        prompts={"prompt_list": []},
+        prompts={"prompt_list": available_prompts},
         default_prompt_text=generator.PromptBuilder.build_template_query(),
         custom = {"header": "Custom Prompts Builder"}
     )
+
+@app.route("/custom_prompts/add", methods=["POST"])
+def add_custom_prompt():
+    ensure_session()
+    name, prompt = request.form.get("name"), request.form.get("prompt")
+    if generator.PromptBuilder.PromptTemplate.verify_template_prompt(prompt):
+        db_manager.add_custom_prompt(name=name, prompt=prompt)
+    return custom_prompts()
+
+@app.route("/custom_prompts/delete", methods=["POST"])
+def delete_custom_prompt():
+    ensure_session()
+    id = request.form.get("id")
+    db_manager.remove_prompt(prompt_id=id)
+    return custom_prompts()
 
 @click.group()
 def bluebook() -> None:
