@@ -1,45 +1,75 @@
 {% extends "base.html.j2" %}
 
+{% block page_title %}Saved Questions{% endblock %}
+
+{% block header_subtitle %}
+<p class="text-muted">Review your saved questions for <em>{{exams['current_exam']['name']}}</em></p>
+{% endblock %}
+
+{% block form_section %}
+<!-- No form on this page -->
+{% endblock %}
+
 {% block content %}
-<div>
-    <p>Saved questions for <em>{{exams['current_exam']['name']}}</em></p>
+<div class="card">
+    {% if serialised_questions['size'] > 0 %}
+        <h2 class="text-left">{{serialised_questions['size']}} Saved Question{% if serialised_questions['size'] != 1 %}s{% endif %}</h2>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📚</div>
+            <div class="empty-state-title">No saved questions yet</div>
+            <p class="empty-state-description">Generate some questions and save the ones you want to review later.</p>
+            <a href="{{url_for('main.root')}}" class="btn btn-primary mt-2">Generate Questions</a>
+        </div>
+    {% endif %}
 </div>
+
 {% for q_index in range(serialised_questions['size']) %}
-    <div class="question-block" id="question-block-no-details-{{q_index}}">
+    <div class="card question-block" id="question-block-no-details-{{q_index}}">
+        <span class="question-number">Q{{ q_index + 1 }}</span>
         <p><strong>{{ serialised_questions["questions"][q_index]['question'] }}</strong></p>
         {% for ch_index in range(4) %}
-                <p>
-                    > {{ serialised_questions["questions"][q_index]['choices'][ch_index]['option'] }}
-                </p>
+            <p class="text-muted" style="margin-left: 16px;">
+                {{ serialised_questions["questions"][q_index]['choices'][ch_index]['option'] }}
+            </p>
         {% endfor %}
-        <div class="button-row">
-            <button type="button" class="subtle-blue-btn"
-                    onclick="toggleDetails({{q_index}})">Details</button>
-            <form class="control-button-form" action="{{url_for('remove_saved_question')}}" method="POST">
-                <input type="hidden" name="persistent_id" id="persistent_id" value="{{serialised_questions['questions'][q_index]['persistent_id']}}">
-                <button type="submit" class="subtle-blue-btn">Delete Question</button>
+        <div class="button-row mt-2">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDetails({{q_index}})">Show Details</button>
+            <form class="control-button-form" action="{{url_for('questions.remove_saved_question')}}" method="POST">
+                <input type="hidden" name="persistent_id" value="{{serialised_questions['questions'][q_index]['persistent_id']}}">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
             </form>
         </div>
     </div>
-    <div class="question-block" id="question-block-with-details-{{q_index}}" style="display: none;">
+    
+    <div class="card question-block" id="question-block-with-details-{{q_index}}" style="display: none;">
+        <span class="question-number">Q{{ q_index + 1 }}</span>
         <p><strong>{{ serialised_questions["questions"][q_index]['question'] }}</strong></p>
         {% for ch_index in range(4) %}
             {% if serialised_questions['questions'][q_index]['choices'][ch_index]["is_correct"] %}
-                <p class="correct-answer">✔ Correct!</p>
-                <p class="user-choice">{{ serialised_questions['questions'][q_index]['choices'][ch_index]['option'] }}</p>
-                <p class="explanation">Why it is correct: {{ serialised_questions['questions'][q_index]['choices'][ch_index]['explanation'] }}</p>
+                <div class="correct-answer">
+                    <p class="user-choice">✔ {{ serialised_questions['questions'][q_index]['choices'][ch_index]['option'] }}</p>
+                    <p class="explanation">{{ serialised_questions['questions'][q_index]['choices'][ch_index]['explanation'] }}</p>
+                </div>
             {% else %}
-                <p class="incorrect-answer">✖ Incorrect!</p>
-                <p class="user-choice">{{ serialised_questions['questions'][q_index]['choices'][ch_index]['option'] }}</p>
-                <p class="explanation">Why incorrect: {{ serialised_questions['questions'][q_index]['choices'][ch_index]['explanation'] }}</p>
+                <div class="incorrect-answer">
+                    <p class="user-choice">✖ {{ serialised_questions['questions'][q_index]['choices'][ch_index]['option'] }}</p>
+                    <p class="explanation">{{ serialised_questions['questions'][q_index]['choices'][ch_index]['explanation'] }}</p>
+                </div>
             {%endif%}
         {% endfor %}
-        <div class="button-row">
-            <button type="button" class="subtle-blue-btn"
-                    onclick="toggleDetails({{q_index}})">Hide</button>
-            <form class="control-button-form" action="{{url_for('remove_saved_question')}}" method="POST">
-                <input type="hidden" name="persistent_id" id="persistent_id" value="{{serialised_questions['questions'][q_index]['persistent_id']}}">
-                <button type="submit" class="subtle-blue-btn">Delete Question</button>
+        
+        {% if serialised_questions['questions'][q_index]['study_recommendation'] %}
+        <div class="study-recommendation">
+            <strong>💡 Study Recommendation:</strong> {{ serialised_questions['questions'][q_index]['study_recommendation'] }}
+        </div>
+        {% endif %}
+        
+        <div class="button-row mt-2">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDetails({{q_index}})">Hide Details</button>
+            <form class="control-button-form" action="{{url_for('questions.remove_saved_question')}}" method="POST">
+                <input type="hidden" name="persistent_id" value="{{serialised_questions['questions'][q_index]['persistent_id']}}">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
             </form>
         </div>
     </div>

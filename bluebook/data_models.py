@@ -1,13 +1,23 @@
+"""Data models for the Blue Book application.
+
+This module contains Pydantic models for questions, choices, and statistics,
+along with serialization/deserialization functions.
+"""
 import logging
 from typing import Any
 
 import bleach
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 
 logger = logging.getLogger("bluebook.data_models")
 
 
 class Statistics:
+    """Statistics for tracking answer correctness."""
+    
+    all_num: int
+    correct: int
+    
     def __init__(self) -> None:
         self.all_num = 0
         self.correct = 0
@@ -33,20 +43,33 @@ class Statistics:
         self.increment_all_num()
         self.increment_correct()
 
-    def serialise(self) -> dict[str, int]:
+    def serialize(self) -> dict[str, int]:
         """Serializes the statistics into a dictionary."""
         return {"all": self.all_num, "correct": self.correct, "incorrect": self.get_incorrect_num()}
 
 
 class Choice(BaseModel):
+    """Model representing a single answer choice."""
+    
     option: str
     is_correct: bool
     explanation: str
 
-    def escape(self) -> None:
-        """Escapes the content of the choice to prevent XSS attacks."""
-        self.option = bleach.clean(self.option)
-        self.explanation = bleach.clean(self.explanation)
+    @field_validator("option", "explanation", mode="before")
+    @classmethod
+    def sanitize_strings(cls, v: str) -> str:
+        """Sanitize string fields to prevent XSS attacks."""
+        if isinstance(v, str):
+            return bleach.clean(v)
+        return v
+
+    @field_validator("option")
+    @classmethod
+    def option_not_empty(cls, v: str) -> str:
+        """Ensure option is not empty."""
+        if not v.strip():
+            raise ValueError("Option cannot be empty")
+        return v
 
 
 class _RawQuestion(BaseModel):
@@ -57,19 +80,47 @@ class _RawQuestion(BaseModel):
 
 
 class Question(BaseModel):
+    """Model representing a question with its choices and metadata."""
+    
     question: str
     choices: list[Choice]
     study_recommendation: str
-    saved: (
-        bool | None
-    )  # Optional field to identify if question is saved or not, in state. Not saved persistently.
-    persistent_id: int | None
+    saved: bool | None = None  # Optional field to identify if question is saved or not
+    persistent_id: int | None = None  # Database ID when saved
 
-    def escape(self) -> None:
-        """Escapes the content of the question and choices to prevent XSS attacks."""
-        self.question = bleach.clean(self.question)
-        for choice in self.choices:
-            choice.escape()
+    @field_validator("question", "study_recommendation", mode="before")
+    @classmethod
+    def sanitize_strings(cls, v: str) -> str:
+        """Sanitize string fields to prevent XSS attacks."""
+        if isinstance(v, str):
+            return bleach.clean(v)
+        return v
+
+    @field_validator("question")
+    @classmethod
+    def question_not_empty(cls, v: str) -> str:
+        """Ensure question is not empty."""
+        if not v.strip():
+            raise ValueError("Question cannot be empty")
+        return v
+
+    @field_validator("choices")
+    @classmethod
+    def validate_choices(cls, v: list[Choice]) -> list[Choice]:
+        """Validate that there is at least one choice."""
+        if not v:
+            raise ValueError("Question must have at least one choice")
+        return v
+
+    @model_validator(mode="after")
+    def validate_has_correct_answer(self) -> "Question":
+        """Ensure there is exactly one correct answer."""
+        correct_count = sum(1 for c in self.choices if c.is_correct)
+        if correct_count == 0:
+            logger.warning("Question has no correct answer marked")
+        elif correct_count > 1:
+            logger.warning(f"Question has {correct_count} correct answers, expected 1")
+        return self
 
     @classmethod
     def from_raw_question(cls, raw_question: _RawQuestion) -> "Question":
@@ -79,77 +130,51 @@ class Question(BaseModel):
         Returns:
             Question: A new Question object created from the raw question data.
         """
-        new_question = Question(
+        return cls(
             question=raw_question.question,
             choices=raw_question.choices,
             study_recommendation=raw_question.study_recommendation,
             saved=None,
             persistent_id=None,
         )
-        return new_question
 
 
 def serialize_questions(question_list: list[Question]) -> dict[str, Any]:
     """Serializes a list of Question objects into a dictionary format.
+    
+    Uses Pydantic's model_dump for serialization.
+    
     Args:
         question_list (list[Question]): List of Question objects to be serialized.
     Returns:
         dict: A dictionary containing serialized questions and their attributes.
     """
-    serialized: dict[str, Any] = {"questions": [], "size": 0}
-    for question in question_list:
-        serialized["questions"].append(
-            {
-                "question": question.question,
-                "choices": [],
-                "study_recommendation": question.study_recommendation,
-                "saved": question.saved,
-                "persistent_id": question.persistent_id,
-            },
-        )
-        for choice in question.choices:
-            serialized["questions"][-1]["choices"].append(
-                {
-                    "option": choice.option,
-                    "is_correct": choice.is_correct,
-                    "explanation": choice.explanation,
-                },
-            )
-        serialized["size"] += 1
-    return serialized
+    return {
+        "questions": [q.model_dump() for q in question_list],
+        "size": len(question_list),
+    }
 
 
 def load_questions(ser_question_list: dict[str, Any]) -> list[Question]:
     """Loads a list of Question objects from a serialized dictionary format.
+    
+    Uses Pydantic's model_validate for deserialization.
+    
     Args:
         ser_question_list (dict): Serialized question list containing questions
         and their attributes.
     Returns:
         list[Question]: A list of Question objects.
     """
-    question_list = list[Question]()
-    if not ser_question_list["questions"]:
-        return question_list
-
-    for i in range(ser_question_list["size"]):
-        choices = list[Choice]()
-        for choice_dict in ser_question_list["questions"][i]["choices"]:
-            choices.append(
-                Choice(
-                    option=choice_dict["option"],
-                    is_correct=choice_dict["is_correct"],
-                    explanation=choice_dict["explanation"],
-                ),
-            )
-
-        question_list.append(
-            Question(
-                question=ser_question_list["questions"][i]["question"],
-                choices=choices,
-                study_recommendation=ser_question_list["questions"][i]["study_recommendation"],
-                saved=ser_question_list["questions"][i]["saved"],
-                persistent_id=ser_question_list["questions"][i]["persistent_id"],
-            ),
-        )
-
-    return question_list
+    if not ser_question_list.get("questions"):
+        return []
+    
+    questions: list[Question] = []
+    for question_data in ser_question_list["questions"]:
+        try:
+            questions.append(Question.model_validate(question_data))
+        except Exception as e:
+            logger.warning(f"Failed to validate question: {e}")
+            continue
+    
+    return questions

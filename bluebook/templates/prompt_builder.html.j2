@@ -1,0 +1,78 @@
+{% extends "base.html.j2" %}
+
+{% block page_title %}Custom Prompts{% endblock %}
+
+{% block header_subtitle %}
+<p class="text-muted">Create and manage custom prompts for question generation</p>
+{% endblock %}
+
+{% block form_section %}
+<!-- No form on this page -->
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="text-left">Available Prompts</h2>
+    
+    {% if prompts["prompt_list"]|length > 0 %}
+    <div class="mt-2">
+        {% for prompt in prompts["prompt_list"] %}
+        <div class="prompt-item">
+            <div class="prompt-header">
+                <span class="prompt-name">{{ prompt["name"] }}</span>
+                <div class="flex gap-1">
+                    <button type="button" class="btn btn-secondary btn-sm" 
+                            onclick="toggleViewer('viewer-{{ prompt['id'] }}', this)">View</button>
+                    <form method="POST" class="control-button-form">
+                        <input type="hidden" name="id" value="{{ prompt['id'] }}">
+                        <button class="btn btn-danger btn-sm" formaction="{{url_for('prompts.delete_custom_prompt')}}">Delete</button>
+                    </form>
+                </div>
+            </div>
+            <div id="viewer-{{ prompt['id'] }}" class="prompt-preview mt-1" style="display: none;">{{ prompt['prompt'] }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state mt-2">
+        <div class="empty-state-icon">📝</div>
+        <div class="empty-state-title">No custom prompts yet</div>
+        <p class="empty-state-description">Create a custom prompt below to customize how questions are generated.</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2 class="text-left">Create New Prompt</h2>
+    
+    <form method="POST" action="{{url_for('prompts.add_custom_prompt')}}" class="mt-2 text-left">
+        <div class="form-group">
+            <label class="form-label" for="name">Prompt Name:</label>
+            <input name="name" id="name" type="text" class="form-input" placeholder="e.g., Detailed Explanations" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="prompt">Prompt Template:</label>
+            <p class="text-muted mb-1" style="font-size: 12px;">
+                Use anchors like <code>##__EXAM_NAME_ANCHOR__##</code> and <code>##__QUESTION_NUM_ANCHOR__##</code> which will be replaced with actual values.
+            </p>
+            <textarea name="prompt" id="prompt" class="form-input prompt-textarea" required>{{ default_prompt_text }}</textarea>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Add New Prompt</button>
+    </form>
+</div>
+
+<script>
+function toggleViewer(id, button) {
+    const viewer = document.getElementById(id);
+    if (viewer.style.display === 'none') {
+        viewer.style.display = 'block';
+        button.textContent = 'Hide';
+    } else {
+        viewer.style.display = 'none';
+        button.textContent = 'View';
+    }
+}
+</script>
+{% endblock content %}

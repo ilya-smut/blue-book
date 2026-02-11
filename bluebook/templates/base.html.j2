@@ -3,151 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bluebook</title>
+    <title>Bluebook{% block title_suffix %}{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/book.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 
 <body>
-<p><a href="{{url_for('root')}}"><img src="{{ url_for('static', filename='images/book.svg') }}" width="100" height="120"></a></p>
-<h1>Student Bluebook: {{exams['current_exam']['name']}}</h1>
-<p>Instantly generate multiple-choice questions to sharpen your <em>{{exams['current_exam']['name']}}</em> skills - just at the press of a button!</p>
-<div id='exam-selector' style="max-width: 300px; display: none;">
-    <form class="control-button-form" action="{{url_for('set_exam')}}" method="POST">
-        <select class="question-dropdown" id="exam-id" name="exam-id">
-            {% for exam in exams['exam_list'] %}
-                {% if exam['id'] == exams['current_exam']['id']%}<option value="{{exam['id']}}">{{ exam['name'] }}</option>{%endif%}
-            {% endfor %}
-            {% for exam in exams['exam_list'] %}
-                {% if exam['id'] != exams['current_exam']['id']%}<option value="{{exam['id']}}">{{ exam['name'] }}</option>{%endif%}
-            {% endfor %}
-        </select>
-        <div class="button-row" style="justify-content: center;margin-top: 10px;">
-            <input type="submit" class="subtle-blue-btn" name="exam-submit-button" id="exam-submit-button" class="exam-submit-button" value="Set exam">
-            <button class="subtle-blue-btn" formmethod="GET" formaction="{{url_for('exam_constructor')}}">Constructor</button>
-        </div>
-    </form>
-</div>
-{% if session['TOKEN_PRESENT'] %}
-{% endif %}
-<div class="control-panel">
-    <form class="control-panel-form" action="{{url_for('generate')}}" method="POST">
-        <label for="num_of_questions">Number of questions:</label>
-        <select name="num_of_questions" id="num_of_questions" class="question-dropdown">
-            <option value="{{session['latest_num']}}">{{session['latest_num']}}</option>
-            {% if session['latest_num'] != "2"%}<option value="2">2</option>{%endif%}
-            {% if session['latest_num'] != "5"%}<option value="5">5</option>{%endif%}
-            {% if session['latest_num'] != "10"%}<option value="10">10</option>{%endif%}
-            {% if session['latest_num'] != "20"%}<option value="20">20</option>{%endif%}
-        </select>
-        <label for="additional_request" style="padding-top: 10px;">Topic to focus on (90 characters max):</label>
-        {% if saved_topics['size'] %}
-            <select name="additional_request_preset" id="additional_request_preset" class="question-dropdown">
-                <option value="">new topic</option>
-                {% for topic in saved_topics['requests'] %}
-                    <option value="{{topic['request']}}">{{topic['request']}}</option>
+<!-- Skip to Content Link for Accessibility -->
+<a href="#main-content" class="skip-link">Skip to content</a>
+
+<!-- Navigation Bar -->
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+    <a href="{{url_for('main.root')}}" class="navbar-brand">
+        <img src="{{ url_for('static', filename='images/book.svg') }}" alt="Bluebook">
+        <span>Bluebook</span>
+    </a>
+    
+    <div class="navbar-center">
+        <form id="exam-switch-form" action="{{url_for('exams.set_exam')}}" method="POST" class="navbar-exam-selector">
+            <span class="navbar-exam-label">Current Exam:</span>
+            <select class="navbar-exam-dropdown" id="nav-exam-id" name="exam-id" onchange="this.form.submit()">
+                {% for exam in exams['exam_list'] %}
+                    <option value="{{exam['id']}}" {% if exam['id'] == exams['current_exam']['id'] %}selected{% endif %}>{{ exam['name'] }}</option>
                 {% endfor %}
             </select>
-        {% endif %}
-        <input type="text" name="additional_request" id="additional_request" style="display: block;margin-top: 10px;">
-        <div class="button-row">
-            <input type="submit" value="Generate" class="subtle-blue-btn">
-            {% if saved_topics['size'] %}
-                <input type="submit" name="remove-saved-topic-button" id="remove-saved-topic-button" value="Delete saved topic" formaction="{{url_for('remove_saved_topic')}}" class="subtle-blue-btn">
-            {% endif %}
-        </div>
-    </form>
-        <div class="control-panel-row">
-                <form class="control-button-form" action="{{url_for('saved_questions')}}" method="GET">
-                    <button type="submit" class="subtle-blue-btn">Saved</button>
-                </form>
-            {% if session['TOKEN_PRESENT'] %}
-                <form class="control-button-form" action="{{url_for('clear_token')}}" method="POST">
-                    <input type="submit" value="Clear Token" class="subtle-blue-btn">
-                </form>
-            {% endif %}
-                <form class="control-button-form" action="{{url_for('clear_persistent_storage')}}" method="POST">
-                    <input type="submit" value="Clear Memory" class="subtle-blue-btn">
-                </form>
-            {% if session['submitted'] %}
-                <form class="control-button-form" action="{{url_for('wipe_questions')}}" method="POST">
-                    <input type="submit" value="Wipe Questions" class="subtle-blue-btn">
-                </form>
-            {% endif %}
-                <button id='exam-selector-button' class="subtle-blue-btn" onclick="examSelectorPressed()">Show exams</button>
-        </div>
-</div>
-{% block content %}
-{% endblock content %}
-<script>
+        </form>
+    </div>
+    
+    <div class="navbar-nav">
+        <a href="{{url_for('main.root')}}" class="nav-link {% if request.endpoint == 'main.root' %}active{% endif %}">Home</a>
+        <a href="{{url_for('questions.saved_questions')}}" class="nav-link {% if request.endpoint == 'questions.saved_questions' %}active{% endif %}">Saved</a>
+        <a href="{{url_for('files.files_page')}}" class="nav-link {% if request.endpoint == 'files.files_page' %}active{% endif %}">Files</a>
+        <a href="{{url_for('prompts.custom_prompts')}}" class="nav-link {% if request.endpoint == 'prompts.custom_prompts' %}active{% endif %}">Prompts</a>
+        <span class="nav-divider"></span>
+        <a href="{{url_for('exams.exam_constructor')}}" class="nav-link {% if request.endpoint == 'exams.exam_constructor' %}active{% endif %}">Constructor</a>
+    </div>
+</nav>
 
+<!-- Main Content -->
+<main id="main-content" class="main-content" role="main">
+    <h1>{% block page_title %}Student Bluebook: {{exams['current_exam']['name']}}{% endblock %}</h1>
+    
+    {% block header_subtitle %}
+    <p class="text-muted">Instantly generate multiple-choice questions to sharpen your <em>{{exams['current_exam']['name']}}</em> skills - just at the press of a button!</p>
+    {% endblock %}
+
+    {% block before_form %}{% endblock %}
+
+    {% block form_section %}
+    <div class="control-panel">
+        <form id="generateForm" class="control-panel-form" action="{{url_for('questions.generate')}}" method="POST">
+            <div class="form-group">
+                <label class="form-label" for="num_of_questions">Number of questions:</label>
+                <select name="num_of_questions" id="num_of_questions" class="form-select" style="width: auto;">
+                    <option value="{{session['latest_num']}}">{{session['latest_num']}}</option>
+                    {% if session['latest_num'] != "2"%}<option value="2">2</option>{%endif%}
+                    {% if session['latest_num'] != "5"%}<option value="5">5</option>{%endif%}
+                    {% if session['latest_num'] != "10"%}<option value="10">10</option>{%endif%}
+                    {% if session['latest_num'] != "20"%}<option value="20">20</option>{%endif%}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="prompt">Prompt:</label>
+                <select name="prompt" id="prompt" class="form-select" style="width: auto;">
+                    <option value="0">Built-in</option>
+                    {% for prompt in session['prompts'] %}
+                    <option value="{{prompt['id']}}">{{prompt['name']}}</option>
+                    {%endfor%}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="additional_request">Topic to focus on:</label>
+                {% if saved_topics['size'] %}
+                    <select name="additional_request_preset" id="additional_request_preset" class="form-select mb-1">
+                        <option value="">Enter a new topic...</option>
+                        {% for topic in saved_topics['requests'] %}
+                            <option value="{{topic['request']}}">{{topic['request']}}</option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+                <input type="text" name="additional_request" id="additional_request" class="form-input" placeholder="e.g., Network security, Cryptography..." maxlength="90">
+                <div id="charCounter" class="char-counter">0 / 90</div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-checkbox">
+                    <input type="checkbox" name="use_attached_files" value="1">
+                    <span>Use attached files</span>
+                </label>
+            </div>
+            
+            <div class="button-row">
+                <button type="submit" id="generateBtn" class="btn btn-primary btn-lg btn-block">Generate Questions</button>
+            </div>
+            
+            {% if saved_topics['size'] %}
+            <div class="button-row mt-1">
+                <button type="submit" name="remove-saved-topic-button" id="remove-saved-topic-button" formaction="{{url_for('questions.remove_saved_topic')}}" class="btn btn-ghost btn-sm" style="display: none;">Delete selected topic</button>
+            </div>
+            {% endif %}
+        </form>
+        
+        <!-- Settings Dropdown -->
+        <div class="settings-dropdown mt-2">
+            <button type="button" class="settings-dropdown-toggle" onclick="toggleSettingsMenu()">
+                ⚙️ Settings
+            </button>
+            <div id="settingsMenu" class="settings-dropdown-menu">
+                {% if session['submitted'] %}
+                <button type="button" class="settings-dropdown-item" onclick="confirmAction('wipe')">
+                    🗑️ Clear Current Questions
+                </button>
+                {% endif %}
+                {% if session['TOKEN_PRESENT'] %}
+                <button type="button" class="settings-dropdown-item danger" onclick="confirmAction('token')">
+                    🔑 Clear API Token
+                </button>
+                {% endif %}
+                <button type="button" class="settings-dropdown-item danger" onclick="confirmAction('memory')">
+                    ⚠️ Reset All Data
+                </button>
+            </div>
+        </div>
+        
+        <!-- Hidden forms for settings actions -->
+        <form id="wipeForm" class="control-button-form" action="{{url_for('main.wipe_questions')}}" method="POST" style="display: none;"></form>
+        <form id="tokenForm" class="control-button-form" action="{{url_for('main.clear_token')}}" method="POST" style="display: none;"></form>
+        <form id="memoryForm" class="control-button-form" action="{{url_for('main.clear_persistent_storage')}}" method="POST" style="display: none;"></form>
+    </div>
+    {% endblock %}
+
+    {% block content %}
+    {% endblock content %}
+</main>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <span id="loadingText" class="loading-text">Generating questions...</span>
+</div>
+
+<!-- Confirmation Dialog -->
+<div id="confirmDialog" class="confirm-dialog-overlay">
+    <div class="confirm-dialog">
+        <div id="confirmIcon" class="confirm-dialog-icon">⚠️</div>
+        <h3 id="confirmTitle" class="confirm-dialog-title">Are you sure?</h3>
+        <p id="confirmMessage" class="confirm-dialog-message">This action cannot be undone.</p>
+        <div class="confirm-dialog-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeConfirmDialog()">Cancel</button>
+            <button type="button" id="confirmBtn" class="btn btn-danger">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<script>
     document.addEventListener('DOMContentLoaded', function () {
         const presetSelect = document.getElementById('additional_request_preset');
         const textboxContainer = document.getElementById('additional_request');
-
-        function toggleTextbox() {
-            if (presetSelect.value === '' || presetSelect.value === 'using textbox below') {
-                textboxContainer.style.display = 'block';
-            } else {
-                textboxContainer.style.display = 'none';
-            }
-        }
-
-        // Initial check on load
-        toggleTextbox();
-
-        // On dropdown change
-        presetSelect.addEventListener('change', toggleTextbox);
-    });
-
-    document.addEventListener('DOMContentLoaded', function (){
-        const presetSelect = document.getElementById('additional_request_preset');
         const removeTopicButton = document.getElementById('remove-saved-topic-button');
 
-        function toggleRemoveTopicButton() {
-            if (presetSelect.value === '' || presetSelect.value === 'new topic') {
-                removeTopicButton.style.display = 'none';
-            } else {
-                removeTopicButton.style.display = 'block';
+        if (presetSelect) {
+            function toggleTextboxAndButton() {
+                const isNewTopic = presetSelect.value === '' || presetSelect.value === 'Enter a new topic...';
+                
+                // Show/hide textbox
+                if (isNewTopic) {
+                    textboxContainer.style.display = 'block';
+                } else {
+                    textboxContainer.style.display = 'none';
+                }
+                
+                // Show/hide delete button
+                if (removeTopicButton) {
+                    removeTopicButton.style.display = isNewTopic ? 'none' : 'block';
+                }
             }
+
+            // Initial check on load
+            toggleTextboxAndButton();
+
+            // On dropdown change
+            presetSelect.addEventListener('change', toggleTextboxAndButton);
         }
-
-        // Initial check on load
-        toggleRemoveTopicButton();
-
-        // On dropdown change
-        presetSelect.addEventListener('change', toggleRemoveTopicButton);
+        
+        // Character counter for topic input
+        const topicInput = document.getElementById('additional_request');
+        const charCounter = document.getElementById('charCounter');
+        
+        if (topicInput && charCounter) {
+            function updateCharCounter() {
+                const length = topicInput.value.length;
+                charCounter.textContent = `${length} / 90`;
+                charCounter.classList.remove('warning', 'error');
+                if (length >= 90) {
+                    charCounter.classList.add('error');
+                } else if (length >= 70) {
+                    charCounter.classList.add('warning');
+                }
+            }
+            
+            topicInput.addEventListener('input', updateCharCounter);
+            updateCharCounter();
+        }
     });
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const switchExamButton = document.getElementById('exam-submit-button');
-        const examSelect = document.getElementById('exam-id');
-
-        function examSelectButtonText() {
-            if (examSelect.value === "{{exams['current_exam']['id']}}") {
-                switchExamButton.value = 'Save state';
-            } else {
-                switchExamButton.value = 'Switch exam';
+    // Loading overlay for form submission
+    document.addEventListener('DOMContentLoaded', function() {
+        const generateForm = document.getElementById('generateForm');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const generateBtn = document.getElementById('generateBtn');
+        
+        if (generateForm && loadingOverlay) {
+            generateForm.addEventListener('submit', function(e) {
+                // Only show loading for the main generate action
+                if (e.submitter && e.submitter.name !== 'remove-saved-topic-button') {
+                    loadingText.textContent = 'Generating questions...';
+                    loadingOverlay.classList.add('active');
+                    if (generateBtn) {
+                        generateBtn.disabled = true;
+                        generateBtn.textContent = 'Generating...';
+                    }
+                }
+            });
+        }
+        
+        // Handle answer form submission
+        const answerForm = document.getElementById('answerForm');
+        if (answerForm && loadingOverlay) {
+            answerForm.addEventListener('submit', function() {
+                loadingText.textContent = 'Checking answers...';
+                loadingOverlay.classList.add('active');
+            });
+        }
+    });
+    
+    // Settings dropdown toggle
+    function toggleSettingsMenu() {
+        const menu = document.getElementById('settingsMenu');
+        if (menu) {
+            menu.classList.toggle('active');
+        }
+    }
+    
+    // Close settings menu when clicking outside
+    document.addEventListener('click', function(e) {
+        const dropdown = document.querySelector('.settings-dropdown');
+        const menu = document.getElementById('settingsMenu');
+        if (dropdown && menu && !dropdown.contains(e.target)) {
+            menu.classList.remove('active');
+        }
+    });
+    
+    // Confirmation dialog
+    let pendingAction = null;
+    
+    function confirmAction(action) {
+        const dialog = document.getElementById('confirmDialog');
+        const icon = document.getElementById('confirmIcon');
+        const title = document.getElementById('confirmTitle');
+        const message = document.getElementById('confirmMessage');
+        const confirmBtn = document.getElementById('confirmBtn');
+        
+        // Close settings menu
+        const menu = document.getElementById('settingsMenu');
+        if (menu) menu.classList.remove('active');
+        
+        const actions = {
+            wipe: {
+                icon: '🗑️',
+                title: 'Clear Current Questions?',
+                message: 'This will remove all currently displayed questions. You can generate new ones anytime.',
+                btnText: 'Clear Questions',
+                btnClass: 'btn-secondary'
+            },
+            token: {
+                icon: '🔑',
+                title: 'Clear API Token?',
+                message: 'You will need to enter a new API token to continue using Bluebook.',
+                btnText: 'Clear Token',
+                btnClass: 'btn-danger'
+            },
+            memory: {
+                icon: '⚠️',
+                title: 'Reset All Data?',
+                message: 'This will permanently delete all saved questions, topics, prompts, and exams. This cannot be undone.',
+                btnText: 'Reset Everything',
+                btnClass: 'btn-danger'
+            }
+        };
+        
+        const config = actions[action];
+        if (config) {
+            icon.textContent = config.icon;
+            title.textContent = config.title;
+            message.textContent = config.message;
+            confirmBtn.textContent = config.btnText;
+            confirmBtn.className = `btn ${config.btnClass}`;
+            pendingAction = action;
+            dialog.classList.add('active');
+        }
+    }
+    
+    function closeConfirmDialog() {
+        const dialog = document.getElementById('confirmDialog');
+        dialog.classList.remove('active');
+        pendingAction = null;
+    }
+    
+    document.getElementById('confirmBtn').addEventListener('click', function() {
+        if (pendingAction) {
+            const formMap = {
+                wipe: 'wipeForm',
+                token: 'tokenForm',
+                memory: 'memoryForm'
+            };
+            const form = document.getElementById(formMap[pendingAction]);
+            if (form) {
+                form.submit();
             }
         }
-
-        // Initial check on load
-        examSelectButtonText();
-
-        // On dropdown change
-        examSelect.addEventListener('change', examSelectButtonText);
+        closeConfirmDialog();
+    });
+    
+    // Close dialog on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeConfirmDialog();
+            const menu = document.getElementById('settingsMenu');
+            if (menu) menu.classList.remove('active');
+        }
     });
 
-    function examSelectorPressed() {
-            const examSelector = document.getElementById('exam-selector');
-            const examSelectorButton = document.getElementById('exam-selector-button');
-            if (examSelector.style.display === 'none') {
-                examSelector.style.display = 'block';
-                examSelectorButton.textContent  = 'Hide exams'
-            } else {
-                examSelector.style.display = 'none';
-                examSelectorButton.textContent  = 'Show exams'
+    // Toast notification system
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
+        const icons = {
+            success: '✓',
+            error: '✕',
+            warning: '⚠',
+            info: 'ℹ'
+        };
+        
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type] || icons.info}</span>
+            <span class="toast-message">${message}</span>
+            <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+        `;
+        
+        container.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
             }
-        }
+        }, 5000);
+    }
+
+    // Make showToast available globally
+    window.showToast = showToast;
 </script>
 </body>
+</html>
