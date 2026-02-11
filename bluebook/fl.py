@@ -12,6 +12,7 @@ from pathlib import Path
 
 import click
 from flask import Flask
+from flask_session import Session
 
 from bluebook import configuration
 from bluebook.routes import (
@@ -62,6 +63,17 @@ def create_app() -> Flask:
     # Initialize the application
     app = Flask("blue-book", template_folder=template_dir, static_folder=static_dir)
     app.secret_key = _get_or_create_secret_key()
+
+    # Use server-side filesystem sessions to avoid the 4KB cookie size limit.
+    # Only a small session ID cookie is sent to the browser.
+    app.config["SESSION_TYPE"] = "filesystem"
+    app.config["SESSION_FILE_DIR"] = str(
+        configuration.Configuration.SystemPath.SESSION_DIR,
+    )
+    app.config["SESSION_PERMANENT"] = False
+    app.config["SESSION_USE_SIGNER"] = True
+    app.config["SESSION_FILE_THRESHOLD"] = 100
+    Session(app)
 
     # Register blueprints
     app.register_blueprint(main_bp)
