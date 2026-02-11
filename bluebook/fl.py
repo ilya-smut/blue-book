@@ -72,7 +72,7 @@ def create_app() -> Flask:
     )
     app.config["SESSION_PERMANENT"] = False
     app.config["SESSION_USE_SIGNER"] = True
-    app.config["SESSION_FILE_THRESHOLD"] = 100
+    app.config["SESSION_FILE_THRESHOLD"] = 5 # only 5 files are stored. Adequate since only 1 user.
     Session(app)
 
     # Register blueprints

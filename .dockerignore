@@ -1,0 +1,11 @@
+.git
+.github
+.venv
+.ruff_cache
+.mypy_cache
+__pycache__
+*.pyc
+examples
+LICENSE
+Dockerfile
+docker-compose.yml
