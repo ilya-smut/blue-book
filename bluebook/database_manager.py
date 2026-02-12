@@ -1,6 +1,7 @@
 import contextlib
 import logging
 from typing import Any, Optional
+from bluebook import file_manager
 
 import sqlalchemy.exc
 from sqlmodel import (
@@ -13,6 +14,7 @@ from sqlmodel import (
     delete,
     select,
 )
+from sqlalchemy import event, Column, ForeignKey, Integer
 
 from bluebook import data_models
 from bluebook.configuration import Configuration
@@ -69,6 +71,36 @@ class States(SQLModel, table=True):
     state: str
     additional_request: str | None
 
+class AttachedFiles(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("exam_id", "name", name="uix_exam_file_name"),
+    )
+    id: int | None = Field(default=None, primary_key=True)
+    exam_id: int = Field(default=None, foreign_key="exams.id")
+    name: str
+
+class CustomPrompts(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("name"),)
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    prompt: str
+
+class MapsPromptExam(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    exam_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("exams.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+    prompt_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("customprompts.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
 
 class Database:
     def __init__(self, exam_id: int = Configuration.DefaultValues.DEFAULT_EXAM_ID) -> None:
@@ -83,13 +115,16 @@ class Database:
         self.exam_id = exam_id
         self.built_in_indices = set[int]()
         self.engine = create_engine(f"sqlite:///{Configuration.SystemPath.DATABASE_PATH}")
+        @event.listens_for(self.engine, "connect")
+        def _enable_sqlite_fk(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
         SQLModel.metadata.create_all(self.engine)
 
         # Initialising built-in exams
-        preset_exams = list[Exams]()
+        preset_exams: list[Exams] = []
         preset_exams.append(Exams(id=0, name="CompTIA Security+"))
-        preset_exams.append(Exams(id=1, name="CompTIA A+"))
-        preset_exams.append(Exams(id=2, name="CompTIA Network+"))
         for exam in preset_exams:
             with Session(self.engine) as session:
                 try:
@@ -176,7 +211,7 @@ class Database:
         with Session(self.engine) as session:
             session.exec(
                 delete(ExtraRequest).where(
-                    col(ExtraRequest.id) == id, col(ExtraRequest.exam_id) == self.exam_id,
+                    col(ExtraRequest.id) == request_id, col(ExtraRequest.exam_id) == self.exam_id,
                 ),
             )  # type: ignore
             session.commit()
@@ -225,7 +260,7 @@ class Database:
                 choices_rows = session.exec(
                     select(Choices).where(Choices.question_id == row.id),
                 )
-                choices = list[data_models.Choice]()
+                choices: list[data_models.Choice] = []
                 for choice_row in choices_rows:
                     choices.append(
                         data_models.Choice(
@@ -270,7 +305,7 @@ class Database:
                 choices_rows = session.exec(
                     select(Choices).where(Choices.question_id == row.id),
                 )
-                choices = list[data_models.Choice]()
+                choices: list[data_models.Choice] = []
                 for choice_row in choices_rows:
                     choices.append(
                         data_models.Choice(
@@ -311,7 +346,7 @@ class Database:
             session.commit()
             if obtained_question:= self.select_question_by_value(question.question, pydantic=False):
                 assinged_id = obtained_question.id # type: ignore
-            choices_to_map = list[Choices]()
+            choices_to_map: list[Choices] = []
             for choice in question.choices:
                 choice_to_insert = Choices(
                     option=choice.option,
@@ -355,13 +390,13 @@ class Database:
             as Pydantic models.
         """
         with Session(self.engine) as session:
-            pydantic_questions = list[data_models.Question]()
+            pydantic_questions: list[data_models.Question] = []
             all_rows = session.exec(select(Questions).where(Questions.exam_id == self.exam_id))
             for question_row in all_rows:
                 choices_rows = session.exec(
                     select(Choices).where(Choices.question_id == question_row.id),
                 )
-                choices = list[data_models.Choice]()
+                choices: list[data_models.Choice] = []
                 for choice_row in choices_rows:
                     choices.append(
                         data_models.Choice(
@@ -434,7 +469,6 @@ class Database:
             exams_rows = session.exec(select(Exams))
             exams = [{"id": row.id, "name": row.name} for row in exams_rows]
             return exams
-        return []
 
     def select_exam_by_id(self, exam_id: int) -> dict[str, Any]:
         """Selects an exam by its ID and returns it as a dictionary.
@@ -490,3 +524,139 @@ class Database:
                 session.exec(delete(States).where(col(States.exam_id) == exam_id))  # type: ignore
                 session.exec(delete(Exams).where(col(Exams.id) == exam_id))  # type: ignore
                 session.commit()
+
+    def add_attached_file(self, filename, exam_id):
+        af = AttachedFiles(exam_id=exam_id, name=filename)
+        with Session(self.engine) as session, contextlib.suppress(sqlalchemy.exc.IntegrityError):
+            session.add(af)
+            session.commit()
+            # if exception occurs, it means the file already attached
+    
+    def select_attached_files(self, exam_id: int|None = None):
+        if not exam_id:
+            exam_id = self.exam_id
+        with Session(self.engine) as session:
+            attached_files = session.exec(select(AttachedFiles).where(AttachedFiles.exam_id == exam_id))
+            files = [{"id": row.id, "name": row.name} for row in attached_files]
+            return files
+    
+    def select_attached_file_by_name(self, filename, exam_id: int|None = None):
+        if not exam_id:
+            exam_id = self.exam_id
+        with Session(self.engine) as session:
+            attached_file = session.exec(select(AttachedFiles).where(AttachedFiles.exam_id == exam_id).where(AttachedFiles.name == filename)).first()
+            if attached_file:
+                file = {"id": attached_file.id, 'name': attached_file.name}
+                return file
+        return None
+    
+    def remove_attached_file(self, id):
+        with Session(self.engine) as session:
+            session.exec(delete(AttachedFiles).where(col(AttachedFiles.id) == id))
+            session.commit()
+
+    def clean_attached_files(self, exam_id: int|None = None):
+        fl = file_manager.FileManager()
+        if not exam_id:
+            exam_id = self.exam_id
+        present_local = set(fl.ls_cache_dir(str_names=True))
+        afs = {}
+        for row in self.select_attached_files(exam_id=exam_id):
+            afs[row["name"]] = row["id"]
+        in_db = set(afs.keys())
+        only_in_db = in_db - present_local
+        for name in only_in_db:
+            self.remove_attached_file(afs[name])
+
+    def add_custom_prompt(self, name, prompt):
+        af = CustomPrompts(name=name, prompt=prompt)
+        with Session(self.engine) as session, contextlib.suppress(sqlalchemy.exc.IntegrityError):
+            session.add(af)
+            session.commit()
+            # if exception occurs, it means that such name exists already
+    
+    def select_prompt_by_id(self, prompt_id):
+        with Session(self.engine) as session:
+            prompt = session.exec(select(CustomPrompts).where(CustomPrompts.id == prompt_id)).first()
+            if prompt:
+                custom_prompt = {"id": prompt.id, 'name': prompt.name, 'prompt': prompt.prompt}
+                return custom_prompt
+        return None
+    
+    def select_prompt_by_name(self, prompt_name):
+        with Session(self.engine) as session:
+            prompt = session.exec(select(CustomPrompts).where(CustomPrompts.name == prompt_name)).first()
+            if prompt:
+                custom_prompt = {"id": prompt.id, 'name': prompt.name, 'prompt': prompt.prompt}
+                return custom_prompt
+        return None
+    
+    def select_all_prompts(self):
+        with Session(self.engine) as session:
+            rows = session.exec(select(CustomPrompts))
+            prompts = [{"id": row.id, "name": row.name, 'prompt': row.prompt} for row in rows]
+            return prompts
+    
+    def remove_prompt(self, prompt_name = None, prompt_id = None):
+        if not (prompt_name or prompt_id):
+            return None
+        with Session(self.engine) as session:
+            if prompt_name:
+                session.exec(delete(CustomPrompts).where(col(CustomPrompts.name) == prompt_name))
+                session.commit()
+            elif prompt_id:
+                session.exec(delete(CustomPrompts).where(col(CustomPrompts.id) == prompt_id))
+                session.commit()
+    
+    def add_prompt_exam_mapping(self, prompt_id, exam_id):
+        af = MapsPromptExam(exam_id=exam_id, prompt_id=prompt_id)
+        with Session(self.engine) as session, contextlib.suppress(sqlalchemy.exc.IntegrityError):
+            session.add(af)
+            session.commit()
+    
+    def select_all_prompt_mappings(self):
+        with Session(self.engine) as session:
+            rows = session.exec(select(MapsPromptExam))
+            mappings = [{"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id} for row in rows]
+            return mappings
+    
+    def remove_prompt_mapping(self, mapping_id):
+        with Session(self.engine) as session:
+            session.exec(delete(MapsPromptExam).where(col(MapsPromptExam.id) == mapping_id))
+            session.commit()
+    
+    def select_prompt_mappings(self, mapping_id: int|None = None, prompt_id: int|None = None, exam_id: int|None = None):
+        if not (mapping_id or prompt_id or exam_id):
+            return self.select_all_prompt_mappings()
+        elif mapping_id:
+            with Session(self.engine) as session:
+                row = session.exec(select(MapsPromptExam).where(MapsPromptExam.id == mapping_id)).first()
+                if row is None:
+                    return None
+                mapping = {"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id}
+                return mapping
+        elif prompt_id and exam_id:
+            with Session(self.engine) as session:
+                row = session.exec(select(MapsPromptExam).where(MapsPromptExam.prompt_id == prompt_id).where(MapsPromptExam.exam_id == exam_id)).first()
+                if row is None:
+                    return None
+                mapping = {"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id}
+                return mapping
+        elif prompt_id:
+            with Session(self.engine) as session:
+                rows = session.exec(select(MapsPromptExam).where(MapsPromptExam.prompt_id == prompt_id))
+                mappings = [{"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id} for row in rows]
+                return mappings
+        elif exam_id:
+            with Session(self.engine) as session:
+                rows = session.exec(select(MapsPromptExam).where(MapsPromptExam.exam_id == exam_id))
+                mappings = [{"id": row.id, "prompt_id": row.prompt_id, 'exam_id': row.exam_id} for row in rows]
+                return mappings
+        else:
+            return None
+
+
+
+        
+
+

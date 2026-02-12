@@ -3,32 +3,39 @@
 {% block content %}
 {% if session['submitted'] %}
     {%if data['size']%}
-        {% if  session['additional_request']['set']%}
-            <div>
-                <p>{{exams['current_exam']['name']}} questions with focus on <b>{{session['additional_request']['value']}}</b></p>
+        {% if session['additional_request']['set']%}
+            <div class="section-header mt-2">
+                <p class="section-title">{{exams['current_exam']['name']}} — <em>{{session['additional_request']['value']}}</em></p>
                 {% if session['additional_request']['set'] and not session['additional_request']['saved']%}
-                    <form class="control-button-form" action="{{url_for('save_the_topic')}}" method="POST">
+                    <form class="control-button-form" action="{{url_for('questions.save_the_topic')}}" method="POST">
                         <input type="hidden" id="topic" name="topic" value="{{session['additional_request']['value']}}">
-                        <input type="submit" value="Save Topic" class="subtle-blue-btn">
+                        <button type="submit" class="btn btn-secondary btn-sm">Save Topic</button>
                     </form>
                 {% endif %}
             </div>
         {% else %}
-            <div><p>General {{exams['current_exam']['name']}} questions.</p></div>
+            <div class="section-header mt-2">
+                <p class="section-title">General {{exams['current_exam']['name']}} Questions</p>
+            </div>
         {% endif %}
     {% else %}
-        <div><p>No questions were generated. This may be due to high server load. Please try again in a few moments.</p></div>
+        <div class="empty-state mt-3">
+            <div class="empty-state-icon">⚠️</div>
+            <div class="empty-state-title">No questions generated</div>
+            <p class="empty-state-description">This may be due to high server load. Please try again in a few moments.</p>
+        </div>
     {% endif %}
-    <div>
-    <form id="answerForm" action="{{ url_for('check') }}" method="POST">
+    
+    <form id="answerForm" action="{{ url_for('questions.check') }}" method="POST">
     {% for q_index in range(data['size']) %}
         <div class="question-block">
+            <span class="question-number">Q{{ q_index + 1 }}</span>
             <p><strong>{{ data["questions"][q_index]['question'] }}</strong></p>
 
             {% for ch_index in range(4) %}
-                <label>
+                <label class="answer-choice">
                     <input type="radio" name="{{ q_index }}" value="{{ ch_index }}" required>
-                    {{ data["questions"][q_index]['choices'][ch_index]['option'] }}
+                    <span class="answer-choice-text">{{ data["questions"][q_index]['choices'][ch_index]['option'] }}</span>
                 </label>
             {% endfor %}
         </div>
@@ -36,8 +43,7 @@
         {%if data['size']%}
             <button class="submit-answers-button" type="submit">Submit Answers</button>
         {%endif%}
-</form>
-</div>
+    </form>
 {% endif %}
 
 {% endblock content %}

@@ -1,52 +1,75 @@
 {% extends "base.html.j2" %}
 
+{% block page_title %}Results{% endblock %}
+
+{% block header_subtitle %}
+<p class="text-muted">Review your answers for <em>{{exams['current_exam']['name']}}</em></p>
+{% endblock %}
+
+{% block form_section %}
+<!-- No form on this page -->
+{% endblock %}
+
 {% block content %}
-    <div class="statistics">
-        {% if data['statistics']['correct'] %}
-            <p class="correct">✔ Correct: {{data['statistics']['correct']}}</p>
-        {% endif %}
-        {% if data['statistics']['incorrect'] %}
-            <p class="incorrect">✖ Incorrect: {{data['statistics']['incorrect']}}</p>
-        {% endif %}
-    </div>
-    {% for q_index in range(data['original_data']['size']) %}
-        <div class="question-block">
-            <p><strong>{{ data['original_data']["questions"][q_index]['question'] }}</strong></p>
+<div class="statistics statistics-sticky">
+    <p class="correct">✔ Correct: {{data['statistics']['correct']}}</p>
+    <p class="incorrect">✖ Incorrect: {{data['statistics']['incorrect']}}</p>
+</div>
+
+{% for q_index in range(data['original_data']['size']) %}
+    <div class="card question-block">
+        <span class="question-number">Q{{ q_index + 1 }}</span>
+        <p><strong>{{ data['original_data']["questions"][q_index]['question'] }}</strong></p>
+        
+        {% if data['is_answer_correct'][q_index] %}
+            <div class="correct-answer">
+                <p>✔ Correct!</p>
+                <p class="user-choice">You chose: {{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['option'] }}</p>
+                <p class="explanation">{{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['explanation'] }}</p>
+            </div>
+        {% else %}
+            <div class="incorrect-answer">
+                <p>✖ Incorrect</p>
+                <p class="user-choice">You chose: {{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['option'] }}</p>
+                <p class="explanation">{{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['explanation'] }}</p>
+            </div>
             
-            {% if data['is_answer_correct'][q_index] %}
-                <p class="correct-answer">✔ Correct!</p>
-                <p class="user-choice">You chose: {{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['option'] }}</p>
-                <p class="explanation">Why it is correct: {{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['explanation'] }}</p>
-            {% else %}
-                <p class="incorrect-answer">✖ Incorrect!</p>
-                <p class="user-choice">You chose: {{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['option'] }}</p>
-                <p class="explanation">Why incorrect: {{ data['original_data']["questions"][q_index]['choices'][data['user_answers'][q_index]]['explanation'] }}</p>
-                {% for choice in data['original_data']["questions"][q_index]['choices'] %}
-                    {% if choice['is_correct'] %}
-                        <p class="correct-answer">✔ Correct answer: {{ choice['option'] }}</p>
-                        <p class="explanation">Why it is correct: {{ choice['explanation'] }}</p>
-                    {% endif %}
-                {% endfor %}
-                <p class="study-recommendation">💡 Study Recommendation: </p>
-                <p class="explanation">{{ data['original_data']["questions"][q_index]['study_recommendation'] }}</p>
-            {% endif %}
-                <form>
-                    <input type="hidden" name="q_index" value="{{ q_index }}">
-                    <button type="button"
-                            class="subtle-blue-btn"
-                            style="margin-top: 10px;"
-                            onclick="saveQuestion(this)">
-                        Save question
-                    </button>
-                </form>
+            {% for choice in data['original_data']["questions"][q_index]['choices'] %}
+                {% if choice['is_correct'] %}
+                    <div class="correct-answer mt-1">
+                        <p>✔ Correct answer:</p>
+                        <p class="user-choice">{{ choice['option'] }}</p>
+                        <p class="explanation">{{ choice['explanation'] }}</p>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            
+            <div class="study-recommendation">
+                <strong>💡 Study Recommendation:</strong> {{ data['original_data']["questions"][q_index]['study_recommendation'] }}
+            </div>
+        {% endif %}
+        
+        <div class="mt-2">
+            <form class="control-button-form">
+                <input type="hidden" name="q_index" value="{{ q_index }}">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="saveQuestion(this)">
+                    Save Question
+                </button>
+            </form>
         </div>
-    {% endfor %}
+    </div>
+{% endfor %}
+
+<div class="mt-3 mb-3">
+    <a href="{{url_for('main.root')}}" class="btn btn-primary">Generate More Questions</a>
+</div>
+
 <script>
 function saveQuestion(buttonElement) {
     const form = buttonElement.closest('form');
     const formData = new FormData(form);
 
-    fetch("{{ url_for('save_question') }}", {
+    fetch("{{ url_for('questions.save_question') }}", {
         method: "POST",
         body: formData,
     })
@@ -54,10 +77,20 @@ function saveQuestion(buttonElement) {
     .then(data => {
         console.log("Saved:", data.message);
         buttonElement.disabled = true;
-        buttonElement.textContent = "Saved";
+        buttonElement.textContent = "Saved!";
+        buttonElement.classList.remove('btn-secondary');
+        buttonElement.classList.add('btn-ghost');
+        
+        // Show toast notification
+        if (window.showToast) {
+            window.showToast('Question saved successfully!', 'success');
+        }
     })
     .catch(error => {
         console.error("Error saving question:", error);
+        if (window.showToast) {
+            window.showToast('Failed to save question. Please try again.', 'error');
+        }
     });
 }
 </script>

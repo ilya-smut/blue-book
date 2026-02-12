@@ -1,0 +1,117 @@
+{% extends "base.html.j2" %}
+
+{% block page_title %}File Manager{% endblock %}
+
+{% block header_subtitle %}
+<p class="text-muted">Upload and manage files for context-aware question generation</p>
+{% endblock %}
+
+{% block form_section %}
+<!-- No form on this page -->
+{% endblock %}
+
+{% block content %}
+<div class="files-container">
+    <!-- Local Files Section -->
+    <div class="files-section">
+        <div class="card">
+            <h2 class="text-left">Local Cache</h2>
+            
+            <form method="post" action="{{ url_for('files.upload_to_cache') }}" enctype="multipart/form-data">
+                <div class="upload-area">
+                    <label class="upload-label" for="fileInput">
+                        <span class="upload-icon">📁</span>
+                        <span id="fileNameDisplay">Click to choose a file</span>
+                    </label>
+                    <input type="file" id="fileInput" name="file" class="file-input-hidden">
+                    <input type="text" name="custom_filename" class="form-input filename-input" 
+                           placeholder="Custom filename (optional)" autocomplete="off" id="customFilename" style="display: none;">
+                    <button type="submit" class="btn btn-primary mt-2" id="uploadBtn" style="display: none;">Upload</button>
+                </div>
+            </form>
+            
+            {% if local_files %}
+            <ul class="file-list">
+                {% for name in local_files %}
+                <li class="file-row {% if name in gemini_files %}synced{% endif %}">
+                    <span class="file-name">
+                        {{ name }}
+                        {% if name in gemini_files %}<span class="synced-badge">synced</span>{% endif %}
+                    </span>
+                    <span class="file-actions">
+                        <form method="post" action="{{url_for('files.upload_to_remote')}}" style="display: inline;">
+                            <input type="hidden" name="filename" value="{{ name }}">
+                            <button class="btn btn-secondary btn-sm" type="submit">Sync</button>
+                        </form>
+                        <form method="post" action="{{url_for('files.delete_from_cache')}}" style="display: inline;">
+                            <input type="hidden" name="filename" value="{{ name }}">
+                            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                        </form>
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state" style="margin-top: 16px;">
+                <p class="text-muted">No local files. Upload a file above.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Gemini Files Section -->
+    <div class="files-section">
+        <div class="card">
+            <h2 class="text-left">Gemini Uploads</h2>
+            
+            {% if gemini_files %}
+            <ul class="file-list">
+                {% for name in gemini_files %}
+                <li class="file-row {% if name in local_files %}synced{% endif %}">
+                    <span class="file-name">
+                        {{ name }}
+                        {% if name in local_files %}<span class="synced-badge">cached</span>{% endif %}
+                    </span>
+                    <span class="file-actions">
+                        <form method="post" action="{{url_for('files.delete_from_remote')}}" style="display: inline;">
+                            <input type="hidden" name="filename" value="{{ name }}">
+                            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                        </form>
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="empty-state" style="margin-top: 16px;">
+                <div class="empty-state-icon">☁️</div>
+                <p class="text-muted">No files uploaded to Gemini yet.</p>
+                <p class="text-muted" style="font-size: 12px;">Upload a local file and click "Sync" to use it with question generation.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    const input = document.getElementById("fileInput");
+    const label = document.getElementById("fileNameDisplay");
+    const customFilename = document.getElementById("customFilename");
+    const uploadBtn = document.getElementById("uploadBtn");
+
+    if (input) {
+        input.addEventListener("change", () => {
+            if (input.files.length) {
+                const fname = input.files[0].name;
+                label.textContent = fname;
+                customFilename.value = fname;
+                customFilename.style.display = "block";
+                uploadBtn.style.display = "inline-flex";
+            } else {
+                label.textContent = "Click to choose a file";
+                customFilename.style.display = "none";
+                uploadBtn.style.display = "none";
+            }
+        });
+    }
+</script>
+{% endblock content %}

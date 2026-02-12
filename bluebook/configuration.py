@@ -15,16 +15,27 @@ Path(get_config_directory()).mkdir(parents=True, exist_ok=True)
 
 class Configuration:
 
+    class LocalAppPath:
+        BLUEBOOK_DIR = Path(__file__).resolve().parent
+
     class SystemPath:
         CONFIG_DIR = get_config_directory()
         CONFIG_PATH = Path(CONFIG_DIR) / "config.json"
         DATABASE_PATH = Path(CONFIG_DIR) / "storage.db"
+        FILES_CACHE_PATH = Path(CONFIG_DIR) / "files/"
+        SESSION_DIR = Path(CONFIG_DIR) / "sessions/"
 
         @classmethod
         def clear_persistent(cls) -> None:
             """Clears the persistent database file."""
             if Path.exists(cls.DATABASE_PATH):
                 Path.unlink(cls.DATABASE_PATH)
+            if cls.FILES_CACHE_PATH.exists():
+                for file in cls.FILES_CACHE_PATH.iterdir():
+                    file.unlink()
 
     class DefaultValues:
         DEFAULT_EXAM_ID = 0     # CompTIA Security+ as a default exam
+    
+    class DefaultPromptSettings:
+        pass
