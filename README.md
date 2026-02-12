@@ -1,82 +1,112 @@
 ![Bluebook Logo](https://github.com/ilya-smut/blue-book/blob/main/bluebook/static/images/book.png?raw=true)
 # Blue Book
-![demo-gif](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/bluebook%20gif.gif?raw=true)
+![demo-gif](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/bluebook.gif?raw=true)
 
-Blue Book is an application that generates multiple-choice questions for IT certifications, e.g.  **CompTIA A+**, **Network+**, and **Security+**. It uses the Gemini API to generate questions and provides instant feedback on answers.
+Blue Book is a web application that generates AI-powered multiple-choice questions for **any exam or certification**. It ships with a built-in preset for **CompTIA Security+**, but you can add any exam you need via the **Exam Constructor**. Powered by Google's Gemini API, it provides instant feedback, detailed explanations, and personalized study recommendations.
 
 [Project's Homepage](https://student-bluebook.notion.site/)
 
 ## Features
 
-- Generate multiple-choice questions for any IT certifications, including **CompTIA A+**, **Network+**, and **Security+**. Add more certifications using **Exam Constructor**
-- Easily switch between preset exams or add your own custom certifications.
-- Focus question generation on specific topics or objectives.
-- Save and access custom topics for future use, per certification.
-- Submit answers and receive immediate feedback with detailed explanations.
+### Question Generation & Review
+- Generate multiple-choice questions for any exam using Gemini AI.
+- Focus generation on specific topics or objectives with **additional requests**.
+- Submit answers and receive immediate feedback with detailed explanations per choice.
 - Get personalized study recommendations based on your answers.
+
+### Exam Management
+- Ships with a built-in **CompTIA Security+** preset.
+- Add custom exams for *any* certification or subject using the **Exam Constructor**.
+- Seamlessly switch between exams — each exam maintains its own isolated state.
+
+### Custom Prompts
+- Build and manage **custom prompt templates** via the Prompt Builder.
+- Use anchor-based templates to control exactly how questions are generated.
+- Select from your saved prompts when generating questions.
+
+### File Attachments
+- Upload reference files (study guides, notes, etc.) to a local cache.
+- Sync files to Gemini remote storage for AI-powered context.
+- Attach specific files to exams — attached files are included as context during question generation.
+
+### Persistence & State
+- **SQLite database** stores all saved questions, topics, exams and prompts.
+- **Server-side sessions** ensure state is preserved without cookie size limits.
 - Save individual questions for later revision.
-- **Persistent state**: all saved questions and topics are retained across sessions.
-- **Isolated storage** per certification ensures organized progress tracking.
-- Run the app in a Docker container with a single command and minimal setup.
+- Save and reuse custom topics per exam.
+- State is automatically saved and restored when switching between exams.
 
 
+## Tech Stack
 
-## Switching between certifications
-Easily switch between built-in certifications.
-
-![switching-exam](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/switching_exam.gif?raw=true)
-
-
-## Add more certifications with Exam Constructor
-Use Exam constructor to add more certifications to the list.
-
-![exam-constructor](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/exam_constructor.gif?raw=true)
-
-
-## All certs have their own state
-All exams have their own space for saved topics and saved questions.
-
-![isolated-exams](https://github.com/ilya-smut/blue-book/blob/main/examples/videos/isolated_exams.gif?raw=true)
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python 3.10+, Flask 3, Click CLI |
+| AI | Google Gemini API (`google-genai`) |
+| Database | SQLite via SQLModel |
+| Validation | Pydantic v2 |
+| Templating | Jinja2 |
+| Sessions | Flask-Session (server-side filesystem) |
+| Sanitization | Bleach |
+| Container | Multi-stage Docker build (Python 3.13 Alpine) |
 
 
 ## Installation
 
-You can install bluebook with pip:
-   ```sh
-   pip install student-bluebook
-   ```
+### Docker (recommended)
 
-With pipx
-   ```sh
-   pipx install student-bluebook
-   ```
+Run with a pre-built image:
+```sh
+docker run -d -p 5000:5000 --platform linux/amd64 ilyasmut/student-bluebook
+```
 
-Or you can simply run it in a docker container
-   ```sh
-   docker run -d -p 5000:5000 --platform linux/amd64 ilyasmut/student-bluebook
-   ```
-   or
-   ```sh
-   git clone https://github.com/ilya-smut/blue-book
-   cd blue-book/
-   docker compose up -d
-   ```
+Or build from source with Docker Compose:
+```sh
+git clone https://github.com/ilya-smut/blue-book
+cd blue-book/
+docker compose up -d
+```
+
+### pip / pipx
+
+```sh
+pip install student-bluebook
+```
+
+```sh
+pipx install student-bluebook
+```
 
 ## Usage
 
-Please see bluebook's interface and capabilities on this wiki page [wiki page](https://github.com/ilya-smut/blue-book/wiki):
-
-To start the application, use the following command:
+Start the application:
 ```sh
 bluebook start
 ```
 
+Start in debug mode (verbose logging):
+```sh
+bluebook start --debug
+```
+
+The app will be available at **http://localhost:5000**. On first launch, you'll be prompted to enter your [Gemini API key](https://aistudio.google.com/apikey).
+
+For a full walkthrough of the interface, see the [wiki](https://github.com/ilya-smut/blue-book/wiki).
+
+## Disclaimer
+
+Blue Book is an independent study tool and is not affiliated with, endorsed by, or sponsored by CompTIA or any other certification body. All certification names are trademarks of their respective owners.
+You can purchase official CompTIA study materials at their [official website](https://www.comptia.org/).
+
+All questions are generated by third-party AI models (Google Gemini). The author of this application has no control over how these models were trained or what content they produce. Generated questions are intended as study aids and should not be treated as official exam material.
+
+Please don't sue me.
+
 ## Contributing
-If you’d like to contribute to Blue Book, feel free to submit a pull request or open an issue.
+If you'd like to contribute to Blue Book, feel free to submit a pull request or open an issue.
 
 ## License
-This project is licensed under the GPLv3
+This project is licensed under the GPLv3.
 
 ## Contact
 For any questions or feedback, feel free to reach out.
-
