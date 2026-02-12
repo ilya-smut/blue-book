@@ -55,6 +55,12 @@ class FileManager:
         else:
             self._token = None
             self.client = None
+
+    def _ensure_client(self) -> bool:
+        """Lazily (re)initialize the Gemini client if not yet ready."""
+        if not self.client_init:
+            self.init_file_api_client()
+        return self.client_init
     
     def copy2cache(self, src_path: Path) -> Path | None:
         if src_path.exists() and src_path.is_file():
@@ -92,7 +98,7 @@ class FileManager:
 
     def ls_remote(self):
         """List files from Gemini API. Returns empty dict on error."""
-        if not self.client_init:
+        if not self._ensure_client():
             return {}
         try:
             files: dict[str, str] = {}
@@ -125,7 +131,7 @@ class FileManager:
         path = self.get_path(name)
         if not path:
             return None
-        if not self.client_init:
+        if not self._ensure_client():
             return None
         
         try:

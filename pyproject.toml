@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "student-bluebook"
-version = "2.0.0"
+version = "2.0.1"
 description = "Blue Book generates AI-powered multiple-choice questions for any exam or certification"
 authors = ["Ilya Smut <ilya.smut.off.g@gmail.com>"]
 readme = "README.md"
